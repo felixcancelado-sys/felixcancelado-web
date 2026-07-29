@@ -58,7 +58,12 @@ function App() {
       <header className="site-header">
         <div className="header-inner">
           <a className="brand" href="#inicio" aria-label="Ir al inicio">
-            <span className="brand-mark">FC</span>
+            <span className="brand-mark">
+              <img
+                src="/felix-logo.png"
+                alt="Logo de Félix Cancelado"
+              />
+            </span>
 
             <span className="brand-copy">
               <strong>Félix Cancelado</strong>
@@ -252,3 +257,4 @@ function App() {
 }
 
 export default App;
+
