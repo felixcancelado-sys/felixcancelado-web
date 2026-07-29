@@ -36,12 +36,12 @@
 }
 
 .brand-mark {
-  width: 56px;
-  height: 56px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  padding: 4px;
+  padding: 2px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -57,21 +57,24 @@
 
 .brand-copy {
   display: grid;
-  line-height: 1.1;
+  min-width: 0;
+  line-height: 1.08;
 }
 
 .brand-copy strong {
   color: #f6fffb;
-  font-size: 0.99rem;
+  font-size: 0.94rem;
+  white-space: nowrap;
 }
 
 .brand-copy small {
-  margin-top: 5px;
+  margin-top: 4px;
   color: #89a39a;
-  font-size: 0.69rem;
+  font-size: 0.63rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .desktop-nav {
@@ -672,20 +675,102 @@
   }
 
   .header-inner {
-    width: calc(100% - 28px);
+    width: calc(100% - 24px);
     min-height: 68px;
+    gap: 14px;
+  }
+
+  .brand {
+    gap: 8px;
+    min-width: 0;
   }
 
   .brand-mark {
-    width: 46px;
-    height: 46px;
-    padding: 3px;
-    border-radius: 0;
+    width: 38px;
+    height: 38px;
+    padding: 1px;
+  }
+
+  .brand-copy strong {
+    font-size: 0.82rem;
   }
 
   .brand-copy small {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.49rem;
+    letter-spacing: 0.06em;
+  }
+
+  .desktop-nav {
     display: none;
   }
+
+  .mobile-menu-area {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  .hero {
+    min-height: 720px;
+    padding: 120px 20px 64px;
+    align-items: flex-end;
+    background-position: 56% center;
+  }
+
+  .hero-overlay {
+    background:
+      linear-gradient(
+        0deg,
+        rgba(2, 14, 11, 0.97) 0%,
+        rgba(2, 14, 11, 0.82) 33%,
+        rgba(2, 14, 11, 0.35) 58%,
+        rgba(2, 14, 11, 0.04) 80%
+      ),
+      linear-gradient(
+        90deg,
+        rgba(2, 14, 11, 0.36),
+        rgba(2, 14, 11, 0.05)
+      );
+  }
+
+  .hero-content {
+    width: min(100%, 680px);
+  }
+
+  .hero-content > * {
+    max-width: 100%;
+  }
+
+  .section-heading,
+  .contact-section {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .apps-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-section {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .about-copy {
+    max-width: 720px;
+    padding-top: 0;
+  }
+
+  .contact-section {
+    padding: 36px 29px;
+  }
+
+  .contact-button {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
 
   .desktop-nav {
     display: none;
@@ -760,11 +845,32 @@
 
 @media (max-width: 560px) {
   .header-inner {
-    width: calc(100% - 24px);
+    width: calc(100% - 20px);
+    min-height: 64px;
+  }
+
+  .brand {
+    gap: 7px;
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
   }
 
   .brand-copy strong {
-    font-size: 0.9rem;
+    font-size: 0.76rem;
+  }
+
+  .brand-copy small {
+    display: block;
+    font-size: 0.43rem;
+    letter-spacing: 0.045em;
+  }
+
+  .mobile-menu-button {
+    width: 38px;
+    height: 38px;
   }
 
   .hero {
@@ -871,5 +977,3 @@
     flex-direction: column;
   }
 }
-
-
