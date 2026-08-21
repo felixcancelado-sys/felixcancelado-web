@@ -1102,3 +1102,55 @@
     border-radius: 20px;
   }
 }
+
+/* Equal app cards final */
+
+.apps-grid {
+  align-items: stretch;
+}
+
+.app-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-card-top {
+  flex: 0 0 auto;
+}
+
+.app-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-card h3 {
+  min-height: 2.25em;
+}
+
+.app-description {
+  min-height: 6.6em;
+}
+
+.app-tags {
+  min-height: 72px;
+}
+
+.app-card-action {
+  margin-top: auto;
+}
+
+@media (max-width: 640px) {
+  .app-card h3 {
+    min-height: 2.8em;
+  }
+
+  .app-description {
+    min-height: 8.8em;
+  }
+
+  .app-tags {
+    min-height: 86px;
+  }
+}

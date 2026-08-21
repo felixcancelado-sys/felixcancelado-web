@@ -187,19 +187,29 @@ function App() {
                     {app.status}
                   </div>
 
-                  <div className="codespeak-logo">
-                    <span className="code-symbol">&lt;/&gt;</span>
-                    <strong>CS</strong>
-                  </div>
+                  {app.image ? (
+                    <img
+                      className="app-image"
+                      src={app.image}
+                      alt={app.name}
+                    />
+                  ) : (
+                    <>
+                      <div className="codespeak-logo">
+                        <span className="code-symbol">&lt;/&gt;</span>
+                        <strong>CS</strong>
+                      </div>
 
-                  <div className="speech-bubble">
-                    <span>&lt;/&gt;</span>
-                    <strong>
-                      I speak <em>code.</em>
-                      <br />
-                      I speak <em>English.</em>
-                    </strong>
-                  </div>
+                      <div className="speech-bubble">
+                        <span>&lt;/&gt;</span>
+                        <strong>
+                          I speak <em>code.</em>
+                          <br />
+                          I speak <em>English.</em>
+                        </strong>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="app-card-body">
@@ -270,6 +280,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
