@@ -350,7 +350,7 @@ function App() {
             </h1>
 
             <p className="hero-description">
-              Desarrollo experiencias digitales para aprender inglés,
+              Desarrollo experiencias digitales para aprender Inglés,
               fortalecer habilidades profesionales y transformar la educación
               mediante la tecnología.
             </p>
@@ -449,6 +449,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
