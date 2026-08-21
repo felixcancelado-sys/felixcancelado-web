@@ -1081,3 +1081,24 @@
     font-size: 0.72rem;
   }
 }
+
+/* Gran Caldas app image */
+
+.app-image {
+  position: relative;
+  z-index: 1;
+  width: min(210px, 72%);
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 30px;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+@media (max-width: 640px) {
+  .app-image {
+    width: min(118px, 82%);
+    border-radius: 20px;
+  }
+}

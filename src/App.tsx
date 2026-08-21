@@ -9,6 +9,7 @@ type LearningApp = {
   tags: string[];
   url: string;
   status: "Disponible" | "Próximamente";
+  image?: string;
 };
 
 const learningApps: LearningApp[] = [
@@ -21,6 +22,7 @@ const learningApps: LearningApp[] = [
     tags: ["IT English", "Práctica", "Gamificación", "Coach IT"],
     url: "https://app.codespeak.tizapp.fun/",
     status: "Disponible",
+    image: "",
   },
   {
     id: "gran-caldas",
@@ -31,6 +33,7 @@ const learningApps: LearningApp[] = [
     tags: ["Primaria", "Escuela Nueva", "PWA", "Solidaria"],
     url: "https://grancaldasescuelanueva.tizapp.fun/",
     status: "Disponible",
+    image: "/gran-caldas-mountain.png",
   },
 ];
 
@@ -267,6 +270,9 @@ function App() {
 }
 
 export default App;
+
+
+
 
 
 
