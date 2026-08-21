@@ -22,6 +22,16 @@ const learningApps: LearningApp[] = [
     url: "https://app.codespeak.tizapp.fun/",
     status: "Disponible",
   },
+  {
+    id: "gran-caldas",
+    name: "Gran Caldas Escuela Nueva",
+    category: "Educación solidaria",
+    description:
+      "Plataforma educativa para mantener activo el proceso de enseñanza-aprendizaje en primaria durante contingencias o reconstrucción.",
+    tags: ["Primaria", "Escuela Nueva", "PWA", "Solidaria"],
+    url: "https://grancaldasescuelanueva.tizapp.fun/",
+    status: "Disponible",
+  },
 ];
 
 function App() {
@@ -201,7 +211,7 @@ function App() {
                   </div>
 
                   <div className="app-card-action">
-                    <span>Entrar a CodeSpeak</span>
+                    <span>Entrar a {app.name}</span>
                     <span className="action-arrow" aria-hidden="true">
                       →
                     </span>
@@ -257,6 +267,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
