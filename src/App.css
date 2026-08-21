@@ -1015,3 +1015,69 @@
     letter-spacing: 0.055em;
   }
 }
+
+
+@media (max-width: 640px) {
+  .apps-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .app-card {
+    border-radius: 18px;
+  }
+
+  .app-card-top {
+    min-height: 145px;
+    padding: 16px 10px;
+    gap: 10px;
+  }
+
+  .codespeak-logo {
+    width: 62px;
+    height: 62px;
+    border-radius: 18px;
+  }
+
+  .codespeak-logo strong {
+    font-size: 1.8rem;
+  }
+
+  .speech-bubble {
+    display: none;
+  }
+
+  .app-card-body {
+    padding: 16px 13px;
+  }
+
+  .app-category {
+    font-size: 0.62rem;
+  }
+
+  .app-card h3 {
+    font-size: 1.05rem;
+    letter-spacing: -0.04em;
+  }
+
+  .app-description {
+    min-height: auto;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .app-tags {
+    gap: 5px;
+  }
+
+  .app-tags span {
+    padding: 5px 7px;
+    font-size: 0.63rem;
+  }
+
+  .app-card-action {
+    margin-top: 16px;
+    padding: 10px 11px;
+    font-size: 0.72rem;
+  }
+}
