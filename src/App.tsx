@@ -39,6 +39,7 @@ const learningApps: LearningApp[] = [
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentHash, setCurrentHash] = useState(window.location.hash || "#inicio");
   const menuAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,14 +58,123 @@ function App() {
       }
     };
 
+    const handleHashChange = () => {
+      setCurrentHash(window.location.hash || "#inicio");
+      setIsMenuOpen(false);
+    };
+
     window.addEventListener("resize", handleResize);
+    window.addEventListener("hashchange", handleHashChange);
     document.addEventListener("mousedown", handleOutsideClick);
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("hashchange", handleHashChange);
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, []);
+
+  const isAboutPage = currentHash === "#/sobre-mi";
+
+  if (isAboutPage) {
+    return (
+      <div className="site-shell">
+        <header className="site-header">
+          <div className="header-inner">
+            <a className="brand" href="#inicio" aria-label="Ir al inicio">
+              <span className="brand-mark">
+                <img
+                  src="/felix-logo.png"
+                  alt="Logo de Félix Cancelado"
+                />
+              </span>
+
+              <span className="brand-copy">
+                <strong>Félix Cancelado</strong>
+                <small>Educación + Tecnología</small>
+              </span>
+            </a>
+
+            <nav className="desktop-nav" aria-label="Navegación principal">
+              <a href="#inicio">Inicio</a>
+              <a href="#apps">Mis apps</a>
+              <a href="#/sobre-mi">Sobre mí</a>
+              <a href="#contacto">Contacto</a>
+            </nav>
+
+            <div className="mobile-menu-area" ref={menuAreaRef}>
+              <button
+                className={`mobile-menu-button ${isMenuOpen ? "mobile-menu-button-open" : ""}`}
+                type="button"
+                aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
+                aria-expanded={isMenuOpen}
+                aria-controls="mobile-navigation-about"
+                onClick={() => setIsMenuOpen((current) => !current)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+
+              <nav
+                id="mobile-navigation-about"
+                className={`mobile-nav ${isMenuOpen ? "mobile-nav-open" : ""}`}
+                aria-label="Navegación móvil"
+              >
+                <a href="#inicio" onClick={() => setIsMenuOpen(false)}>
+                  Inicio
+                </a>
+                <a href="#apps" onClick={() => setIsMenuOpen(false)}>
+                  Mis apps
+                </a>
+                <a href="#/sobre-mi" onClick={() => setIsMenuOpen(false)}>
+                  Sobre mí
+                </a>
+                <a href="#contacto" onClick={() => setIsMenuOpen(false)}>
+                  Contacto
+                </a>
+              </nav>
+            </div>
+          </div>
+        </header>
+
+        <main>
+          <section className="about-page">
+            <nav className="breadcrumbs" aria-label="Ruta de navegación">
+              <a href="#inicio">Inicio</a>
+              <span>/</span>
+              <strong>Sobre mí</strong>
+            </nav>
+
+            <section className="about-section about-section-page">
+              <div className="about-heading">
+                <p className="section-kicker">Sobre mí</p>
+                <h2>Comunicación, educación y productos digitales.</h2>
+              </div>
+
+              <div className="about-copy">
+                <p>
+                  Soy Félix Cancelado, comunicador social, diseñador instruccional
+                  y creador de experiencias educativas digitales.
+                </p>
+
+                <p>
+                  Diseño aplicaciones prácticas, visuales y accesibles para que
+                  personas, familias, docentes e instituciones puedan aprender con
+                  tecnología.
+                </p>
+              </div>
+            </section>
+          </section>
+        </main>
+
+        <footer className="site-footer">
+          <span>© {new Date().getFullYear()} Félix Cancelado</span>
+          <span>Educación + Tecnología</span>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="site-shell">
@@ -87,7 +197,7 @@ function App() {
           <nav className="desktop-nav" aria-label="Navegación principal">
             <a href="#inicio">Inicio</a>
             <a href="#apps">Mis apps</a>
-            <a href="#sobre-mi">Sobre mí</a>
+            <a href="#/sobre-mi">Sobre mí</a>
             <a href="#contacto">Contacto</a>
           </nav>
 
@@ -120,7 +230,7 @@ function App() {
               <a href="#apps" onClick={() => setIsMenuOpen(false)}>
                 Mis apps
               </a>
-              <a href="#sobre-mi" onClick={() => setIsMenuOpen(false)}>
+              <a href="#/sobre-mi" onClick={() => setIsMenuOpen(false)}>
                 Sobre mí
               </a>
               <a href="#contacto" onClick={() => setIsMenuOpen(false)}>
@@ -139,8 +249,8 @@ function App() {
             <p className="section-kicker">Educación + tecnología</p>
 
             <h1>
-              Creo aplicaciones para
-              <span> aprender haciendo.</span>
+              Inglés con propósitos
+              <span> profesionales.</span>
             </h1>
 
             <p className="hero-description">
@@ -163,10 +273,7 @@ function App() {
               <h2>Experiencias de aprendizaje listas para usar.</h2>
             </div>
 
-            <p className="section-introduction">
-              Este espacio irá creciendo con nuevas aplicaciones educativas.
-              Cada credencial permite entrar directamente a la experiencia.
-            </p>
+
           </div>
 
           <div className="apps-grid">
@@ -235,26 +342,6 @@ function App() {
           </div>
         </section>
 
-        <section className="about-section" id="sobre-mi">
-          <div className="about-heading">
-            <p className="section-kicker">Sobre mí</p>
-            <h2>Comunicación, educación y productos digitales.</h2>
-          </div>
-
-          <div className="about-copy">
-            <p>
-              Soy Félix Cancelado, comunicador social, diseñador instruccional
-              y creador de experiencias educativas digitales.
-            </p>
-
-            <p>
-              Diseño aplicaciones prácticas, visuales y accesibles para que
-              personas, familias, docentes e instituciones puedan aprender con
-              tecnología.
-            </p>
-          </div>
-        </section>
-
         <section className="contact-section" id="contacto">
           <div>
             <p className="section-kicker">Contacto</p>
@@ -280,6 +367,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
