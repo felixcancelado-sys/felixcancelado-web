@@ -240,9 +240,9 @@ function App() {
 
           <a
             className="contact-button"
-            href="mailto:contacto@felixcancelado.com"
+            href="mailto:felixcancelado@gmail.com"
           >
-            <span>contacto@felixcancelado.com</span>
+            <span>felixcancelado@gmail.com</span>
             <span aria-hidden="true">→</span>
           </a>
         </section>
@@ -257,4 +257,5 @@ function App() {
 }
 
 export default App;
+
 
