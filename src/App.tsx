@@ -75,6 +75,7 @@ function App() {
   }, []);
 
   const isAboutPage = currentHash === "#/sobre-mi";
+  const isContactPage = currentHash === "#/contacto";
 
   if (isAboutPage) {
     return (
@@ -99,7 +100,7 @@ function App() {
               <a href="#inicio">Inicio</a>
               <a href="#apps">Mis apps</a>
               <a href="#/sobre-mi">Sobre mí</a>
-              <a href="#contacto">Contacto</a>
+              <a href="#/contacto">Contacto</a>
             </nav>
 
             <div className="mobile-menu-area" ref={menuAreaRef}>
@@ -130,7 +131,7 @@ function App() {
                 <a href="#/sobre-mi" onClick={() => setIsMenuOpen(false)}>
                   Sobre mí
                 </a>
-                <a href="#contacto" onClick={() => setIsMenuOpen(false)}>
+                <a href="#/contacto" onClick={() => setIsMenuOpen(false)}>
                   Contacto
                 </a>
               </nav>
@@ -176,6 +177,101 @@ function App() {
     );
   }
 
+  if (isContactPage) {
+    return (
+      <div className="site-shell">
+        <header className="site-header">
+          <div className="header-inner">
+            <a className="brand" href="#inicio" aria-label="Ir al inicio">
+              <span className="brand-mark">
+                <img
+                  src="/felix-logo.png"
+                  alt="Logo de Félix Cancelado"
+                />
+              </span>
+
+              <span className="brand-copy">
+                <strong>Félix Cancelado</strong>
+                <small>Educación + Tecnología</small>
+              </span>
+            </a>
+
+            <nav className="desktop-nav" aria-label="Navegación principal">
+              <a href="#inicio">Inicio</a>
+              <a href="#apps">Mis apps</a>
+              <a href="#/sobre-mi">Sobre mí</a>
+              <a href="#/contacto">Contacto</a>
+            </nav>
+
+            <div className="mobile-menu-area" ref={menuAreaRef}>
+              <button
+                className={`mobile-menu-button ${isMenuOpen ? "mobile-menu-button-open" : ""}`}
+                type="button"
+                aria-label={isMenuOpen ? "Cerrar menú" : "Abrir menú"}
+                aria-expanded={isMenuOpen}
+                aria-controls="mobile-navigation-contact"
+                onClick={() => setIsMenuOpen((current) => !current)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
+
+              <nav
+                id="mobile-navigation-contact"
+                className={`mobile-nav ${isMenuOpen ? "mobile-nav-open" : ""}`}
+                aria-label="Navegación móvil"
+              >
+                <a href="#inicio" onClick={() => setIsMenuOpen(false)}>
+                  Inicio
+                </a>
+                <a href="#apps" onClick={() => setIsMenuOpen(false)}>
+                  Mis apps
+                </a>
+                <a href="#/sobre-mi" onClick={() => setIsMenuOpen(false)}>
+                  Sobre mí
+                </a>
+                <a href="#/contacto" onClick={() => setIsMenuOpen(false)}>
+                  Contacto
+                </a>
+              </nav>
+            </div>
+          </div>
+        </header>
+
+        <main>
+          <section className="contact-page">
+            <nav className="breadcrumbs" aria-label="Ruta de navegación">
+              <a href="#inicio">Inicio</a>
+              <span>/</span>
+              <strong>Contacto</strong>
+            </nav>
+
+            <section className="contact-section contact-section-page">
+              <div>
+                <p className="section-kicker">Contacto</p>
+                <h2>Construyamos nuevas formas de aprender.</h2>
+              </div>
+
+              <a
+                className="contact-button"
+                href="mailto:felixcancelado@gmail.com"
+              >
+                <span>felixcancelado@gmail.com</span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </section>
+          </section>
+        </main>
+
+        <footer className="site-footer">
+          <span>© {new Date().getFullYear()} Félix Cancelado</span>
+          <span>Educación + Tecnología</span>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="site-shell">
       <header className="site-header">
@@ -198,7 +294,7 @@ function App() {
             <a href="#inicio">Inicio</a>
             <a href="#apps">Mis apps</a>
             <a href="#/sobre-mi">Sobre mí</a>
-            <a href="#contacto">Contacto</a>
+            <a href="#/contacto">Contacto</a>
           </nav>
 
           <div className="mobile-menu-area" ref={menuAreaRef}>
@@ -233,7 +329,7 @@ function App() {
               <a href="#/sobre-mi" onClick={() => setIsMenuOpen(false)}>
                 Sobre mí
               </a>
-              <a href="#contacto" onClick={() => setIsMenuOpen(false)}>
+              <a href="#/contacto" onClick={() => setIsMenuOpen(false)}>
                 Contacto
               </a>
             </nav>
@@ -342,20 +438,6 @@ function App() {
           </div>
         </section>
 
-        <section className="contact-section" id="contacto">
-          <div>
-            <p className="section-kicker">Contacto</p>
-            <h2>Construyamos nuevas formas de aprender.</h2>
-          </div>
-
-          <a
-            className="contact-button"
-            href="mailto:felixcancelado@gmail.com"
-          >
-            <span>felixcancelado@gmail.com</span>
-            <span aria-hidden="true">→</span>
-          </a>
-        </section>
       </main>
 
       <footer className="site-footer">
