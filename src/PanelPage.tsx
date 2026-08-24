@@ -801,6 +801,32 @@ export function PanelPage() {
     }
   }
 
+  async function replaceOrderDocument(order: Order, file: File) {
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      await uploadOrderDocument(order.id, file);
+
+      await loadOrders();
+
+      if (section === "pending") {
+        await loadPendingOrders();
+      }
+
+      setMessage(
+        `PDF ${order.document?.fileName ? "reemplazado" : "adjuntado"} en la orden #${order.number}.`
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo adjuntar el PDF."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
   async function prepareEmailOrder(order: Order, mode: "send" | "resend") {
     if (!order.contact?.email) {
       setMessage(`La orden #${order.number} no tiene un email de contacto.`);
@@ -1539,6 +1565,32 @@ export function PanelPage() {
                               >
                                 Descargar imagen
                               </button>
+
+                              <label
+                                className="panel-small-action"
+                                style={{ cursor: "pointer" }}
+                              >
+                                {order.document?.fileName
+                                  ? "Reemplazar PDF"
+                                  : "Adjuntar PDF"}
+
+                                <input
+                                  type="file"
+                                  accept="application/pdf"
+                                  style={{ display: "none" }}
+                                  disabled={isLoading}
+                                  onChange={async (event) => {
+                                    const file = event.target.files?.[0];
+
+                                    if (!file) {
+                                      return;
+                                    }
+
+                                    await replaceOrderDocument(order, file);
+                                    event.currentTarget.value = "";
+                                  }}
+                                />
+                              </label>
 
                               <button
                                 type="button"
