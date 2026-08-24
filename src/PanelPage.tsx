@@ -21,7 +21,23 @@ type Contact = {
   status?: string;
 };
 
-type PanelSection = "dashboard" | "contacts";
+type Order = {
+  id: string;
+  number: number;
+  description: string;
+  status: string;
+  currency: string;
+  total: string | number;
+  issueDate: string;
+  dueDate?: string | null;
+  contact?: {
+    firstName: string;
+    lastName?: string | null;
+    email?: string | null;
+  };
+};
+
+type PanelSection = "dashboard" | "contacts" | "orders" | "pending";
 
 const API_BASE_URL = import.meta.env.VITE_ORDERS_API_URL || "";
 
@@ -40,6 +56,8 @@ export function PanelPage() {
   const [section, setSection] = useState<PanelSection>("dashboard");
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [contactForm, setContactForm] = useState({
     firstName: "",
     lastName: "",
@@ -93,6 +111,18 @@ export function PanelPage() {
     setContacts(data);
   }
 
+  async function loadOrders() {
+    const response = await apiFetch("/api/panel/orders");
+    const data = (await response.json()) as Order[];
+    setOrders(data);
+  }
+
+  async function loadPendingOrders() {
+    const response = await apiFetch("/api/panel/orders/pending");
+    const data = (await response.json()) as Order[];
+    setPendingOrders(data);
+  }
+
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -138,6 +168,14 @@ export function PanelPage() {
 
       if (section === "contacts") {
         await loadContacts();
+      }
+
+      if (section === "orders") {
+        await loadOrders();
+      }
+
+      if (section === "pending") {
+        await loadPendingOrders();
       }
 
       setMessage("Panel actualizado.");
@@ -197,6 +235,8 @@ export function PanelPage() {
     setToken("");
     setDashboard(null);
     setContacts([]);
+    setOrders([]);
+    setPendingOrders([]);
     setPassword("");
     setMessage("Sesion cerrada.");
   }
@@ -212,6 +252,14 @@ export function PanelPage() {
 
     if (section === "contacts") {
       loadContacts().catch(() => setMessage("No se pudieron cargar los contactos."));
+    }
+
+    if (section === "orders") {
+      loadOrders().catch(() => setMessage("No se pudieron cargar las ordenes."));
+    }
+
+    if (section === "pending") {
+      loadPendingOrders().catch(() => setMessage("No se pudieron cargar los pendientes."));
     }
   }, [section, token]);
 
@@ -275,11 +323,19 @@ export function PanelPage() {
                 Contactos
               </button>
 
-              <button type="button" disabled>
+              <button
+                type="button"
+                className={section === "orders" ? "panel-tab-active" : ""}
+                onClick={() => setSection("orders")}
+              >
                 Órdenes
               </button>
 
-              <button type="button" disabled>
+              <button
+                type="button"
+                className={section === "pending" ? "panel-tab-active" : ""}
+                onClick={() => setSection("pending")}
+              >
                 Pendientes
               </button>
 
@@ -347,6 +403,76 @@ export function PanelPage() {
                   </p>
                 </div>
               </>
+            ) : null}
+
+            {section === "orders" ? (
+              <section className="panel-orders">
+                <div className="panel-section-title">
+                  <div>
+                    <h2>Órdenes</h2>
+                    <p>Listado general de órdenes emitidas.</p>
+                  </div>
+
+                  <strong>{orders.length} orden(es)</strong>
+                </div>
+
+                <div className="panel-order-list">
+                  {orders.length === 0 ? (
+                    <div className="panel-empty">
+                      <p>Aún no hay órdenes creadas. La primera orden real será la #682.</p>
+                    </div>
+                  ) : (
+                    orders.map((order) => (
+                      <article key={order.id} className="panel-order-item">
+                        <div>
+                          <strong>Orden #{order.number}</strong>
+                          <span>{order.description}</span>
+                        </div>
+
+                        <div>
+                          <strong>{formatMoney(Number(order.total))}</strong>
+                          <span>{order.status}</span>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+            ) : null}
+
+            {section === "pending" ? (
+              <section className="panel-orders">
+                <div className="panel-section-title">
+                  <div>
+                    <h2>Pendientes</h2>
+                    <p>Órdenes enviadas, sin pagar o vencidas.</p>
+                  </div>
+
+                  <strong>{pendingOrders.length} pendiente(s)</strong>
+                </div>
+
+                <div className="panel-order-list">
+                  {pendingOrders.length === 0 ? (
+                    <div className="panel-empty">
+                      <p>No hay órdenes pendientes por cobrar.</p>
+                    </div>
+                  ) : (
+                    pendingOrders.map((order) => (
+                      <article key={order.id} className="panel-order-item">
+                        <div>
+                          <strong>Orden #{order.number}</strong>
+                          <span>{order.contact?.email || "Sin email"}</span>
+                        </div>
+
+                        <div>
+                          <strong>{formatMoney(Number(order.total))}</strong>
+                          <span>{order.status}</span>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
             ) : null}
 
             {section === "contacts" ? (
@@ -507,3 +633,4 @@ export function PanelPage() {
     </div>
   );
 }
+

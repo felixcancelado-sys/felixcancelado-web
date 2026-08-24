@@ -1518,3 +1518,39 @@
     flex-direction: column !important;
   }
 }
+
+.panel-order-list {
+  display: grid;
+  gap: 12px;
+}
+
+.panel-order-item {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 14px;
+  align-items: center;
+  padding: 17px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.panel-order-item div {
+  display: grid;
+  gap: 5px;
+}
+
+.panel-order-item strong {
+  color: #f8fafc;
+}
+
+.panel-order-item span {
+  color: rgba(248, 250, 252, 0.7);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 760px) {
+  .panel-order-item {
+    grid-template-columns: 1fr;
+  }
+}
