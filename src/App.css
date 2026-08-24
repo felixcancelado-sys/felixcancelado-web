@@ -1675,3 +1675,45 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* PANEL PAYMENT DETAILS AND PDF */
+
+.panel-payment-card {
+  display: grid !important;
+  gap: 6px !important;
+  padding: 16px !important;
+  border: 1px solid rgba(103, 232, 249, 0.24) !important;
+  border-radius: 20px !important;
+  background: rgba(103, 232, 249, 0.08) !important;
+}
+
+.panel-payment-card span {
+  color: rgba(248, 250, 252, 0.68) !important;
+  font-weight: 800 !important;
+}
+
+.panel-payment-card strong {
+  color: #f8fafc !important;
+  font-size: 1.05rem !important;
+}
+
+.panel-payment-card small {
+  color: rgba(248, 250, 252, 0.82) !important;
+  font-size: 0.92rem !important;
+}
+
+.panel-order-form input[type="file"] {
+  padding: 10px !important;
+  cursor: pointer !important;
+}
+
+.panel-order-form input[type="file"]::file-selector-button {
+  border: 0 !important;
+  border-radius: 999px !important;
+  padding: 9px 13px !important;
+  margin-right: 12px !important;
+  color: #042f2e !important;
+  background: linear-gradient(135deg, #67e8f9, #34d399) !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}

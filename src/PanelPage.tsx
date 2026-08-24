@@ -34,6 +34,9 @@ type Order = {
   discount?: string | number;
   issueDate: string;
   dueDate?: string | null;
+  document?: {
+    fileName: string;
+  } | null;
   contact?: {
     firstName: string;
     lastName?: string | null;
@@ -83,6 +86,47 @@ function formatOrderStatus(status: string) {
   return labels[status] || status;
 }
 
+type PaymentDetails = {
+  label: string;
+  lines: string[];
+};
+
+function normalizeCountry(value?: string | null) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function getPaymentDetails(contact?: Contact | null): PaymentDetails {
+  const country = normalizeCountry(contact?.country);
+
+  if (country.includes("argentina")) {
+    return {
+      label: "Argentina · BBVA",
+      lines: [
+        "Alias: PROFE.FELIX.CANCELAD",
+        "CBU: 0170006040000005422924",
+        "Cuenta: 6-54229/2",
+        "Tipo: Caja de Ahorros",
+      ],
+    };
+  }
+
+  if (country.includes("colombia")) {
+    return {
+      label: "Colombia · Llave Nu",
+      lines: ["Llave Nu: @FCJ615"],
+    };
+  }
+
+  return {
+    label: "Resto del mundo · PayPal",
+    lines: ["PayPal: felixcancelado@gmail.com"],
+  };
+}
+
 export function PanelPage() {
   const [email, setEmail] = useState("felixcancelado@gmail.com");
   const [password, setPassword] = useState("");
@@ -120,6 +164,8 @@ export function PanelPage() {
     internalNotes: "",
   });
 
+  const [orderDocument, setOrderDocument] = useState<File | null>(null);
+
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -137,6 +183,14 @@ export function PanelPage() {
 
   const estimatedTotal = Math.max(estimatedSubtotal - estimatedDiscount, 0);
 
+  const selectedOrderContact = useMemo(() => {
+    return contacts.find((contact) => contact.id === orderForm.contactId) || null;
+  }, [contacts, orderForm.contactId]);
+
+  const selectedPaymentDetails = useMemo(() => {
+    return getPaymentDetails(selectedOrderContact);
+  }, [selectedOrderContact]);
+
   async function apiFetch(path: string, options: RequestInit = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
@@ -148,10 +202,49 @@ export function PanelPage() {
     });
 
     if (!response.ok) {
-      throw new Error("No se pudo completar la solicitud.");
+      let errorMessage = "No se pudo completar la solicitud.";
+
+      try {
+        const errorData = await response.json();
+        if (errorData?.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Keep default message.
+      }
+
+      throw new Error(errorMessage);
     }
 
     return response;
+  }
+
+  async function uploadOrderDocument(orderId: string, file: File) {
+    const formData = new FormData();
+    formData.append("document", file);
+
+    const response = await fetch(`${API_BASE_URL}/api/panel/orders/${orderId}/document`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = "La orden fue creada, pero no se pudo adjuntar el PDF.";
+
+      try {
+        const errorData = await response.json();
+        if (errorData?.error) {
+          errorMessage = errorData.error;
+        }
+      } catch {
+        // Keep default message.
+      }
+
+      throw new Error(errorMessage);
+    }
   }
 
   async function loadDashboard(activeToken = token) {
@@ -314,7 +407,7 @@ export function PanelPage() {
         throw new Error("La orden debe tener un total mayor a cero.");
       }
 
-      await apiFetch("/api/panel/orders", {
+      const response = await apiFetch("/api/panel/orders", {
         method: "POST",
         body: JSON.stringify({
           contactId: orderForm.contactId,
@@ -325,10 +418,23 @@ export function PanelPage() {
           detail: orderForm.detail.trim() || undefined,
           hours: optionalNumber(orderForm.hours),
           rate: optionalNumber(orderForm.rate),
+          quantity: optionalNumber(orderForm.hours),
+          subtotal: estimatedSubtotal,
           discount: optionalNumber(orderForm.discount) || 0,
+          total: estimatedTotal,
           internalNotes: orderForm.internalNotes.trim() || undefined,
         }),
       });
+
+      const createdOrder = (await response.json()) as { id?: string };
+
+      if (orderDocument) {
+        if (!createdOrder.id) {
+          throw new Error("La orden fue creada, pero no se pudo identificar para adjuntar el PDF.");
+        }
+
+        await uploadOrderDocument(createdOrder.id, orderDocument);
+      }
 
       setOrderForm({
         contactId: "",
@@ -342,10 +448,12 @@ export function PanelPage() {
         internalNotes: "",
       });
 
+      setOrderDocument(null);
+
       await loadDashboard();
       await loadOrders();
       setOrderView("list");
-      setMessage("Orden creada. Revisa el consecutivo en la lista.");
+      setMessage(orderDocument ? "Orden creada con PDF adjunto." : "Orden creada.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Error al crear orden.");
     } finally {
@@ -735,11 +843,6 @@ export function PanelPage() {
 
                 {orderView === "create" ? (
                   <form className="panel-order-form" onSubmit={handleCreateOrder}>
-                    <div className="panel-warning">
-                      <strong>Atención:</strong> al guardar una orden real se usará el próximo
-                      consecutivo disponible. La primera debe ser la #682.
-                    </div>
-
                     <label className="panel-wide-field">
                       Contacto *
                       <select
@@ -760,6 +863,14 @@ export function PanelPage() {
                         ))}
                       </select>
                     </label>
+
+                    <div className="panel-payment-card panel-wide-field">
+                      <span>Datos de pago sugeridos</span>
+                      <strong>{selectedPaymentDetails.label}</strong>
+                      {selectedPaymentDetails.lines.map((line) => (
+                        <small key={line}>{line}</small>
+                      ))}
+                    </div>
 
                     <label>
                       Estado
@@ -878,6 +989,18 @@ export function PanelPage() {
                       />
                     </label>
 
+                    <label className="panel-wide-field">
+                      Adjuntar documento legal PDF
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          setOrderDocument(file);
+                        }}
+                      />
+                    </label>
+
                     <div className="panel-order-total">
                       <span>Subtotal estimado</span>
                       <strong>{formatMoney(estimatedSubtotal)}</strong>
@@ -919,6 +1042,11 @@ export function PanelPage() {
                           <div>
                             <strong>{formatMoney(Number(order.total))}</strong>
                             <span>{formatOrderStatus(order.status)}</span>
+                            <span>
+                              {order.document?.fileName
+                                ? `PDF adjunto: ${order.document.fileName}`
+                                : "Sin PDF adjunto"}
+                            </span>
                             <span>
                               {order.dueDate
                                 ? `Vence: ${new Date(order.dueDate).toLocaleDateString("es-AR")}`
