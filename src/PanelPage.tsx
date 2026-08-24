@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { jsPDF } from "jspdf";
 
 type DashboardData = {
   ordersCount: number;
@@ -37,10 +38,17 @@ type Order = {
   document?: {
     fileName: string;
   } | null;
+  hours?: string | number | null;
+  rate?: string | number | null;
+  quantity?: string | number | null;
+  internalNotes?: string | null;
   contact?: {
     firstName: string;
     lastName?: string | null;
     email?: string | null;
+    country?: string | null;
+    city?: string | null;
+    company?: string | null;
   };
 };
 
@@ -542,8 +550,16 @@ export function PanelPage() {
   }
 
 
+
+
+
+
+
+
+
+
   function getOrderPaymentDetails(order: Order) {
-    const region = guessPaymentRegion(order.contact?.email?.includes(".co") ? "Colombia" : "");
+    const region = guessPaymentRegion(order.contact?.country || "");
     return getPaymentDetailsByRegion(region);
   }
 
@@ -555,9 +571,59 @@ export function PanelPage() {
     return `${order.contact.firstName} ${order.contact.lastName || ""}`.trim();
   }
 
-  function buildOrderHtml(order: Order) {
-    const payment = getOrderPaymentDetails(order);
+  function getOrderCustomerLocation(order: Order) {
+    return [order.contact?.city, order.contact?.country].filter(Boolean).join(", ");
+  }
+
+  function formatCanvasText(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    lineHeight: number,
+    maxLines = 4
+  ) {
+    const words = String(text || "").split(" ");
+    const lines: string[] = [];
+    let currentLine = "";
+
+    words.forEach((word) => {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const width = context.measureText(testLine).width;
+
+      if (width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    });
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    lines.slice(0, maxLines).forEach((line, index) => {
+      context.fillText(line, x, y + index * lineHeight);
+    });
+
+    return y + Math.min(lines.length, maxLines) * lineHeight;
+  }
+
+  function loadLogoImage() {
+    return new Promise<HTMLImageElement | null>((resolve) => {
+      const logo = new Image();
+      logo.onload = () => resolve(logo);
+      logo.onerror = () => resolve(null);
+      logo.src = "/logo-felix.png";
+    });
+  }
+
+  async function buildOrderCanvas(order: Order) {
     const customer = getOrderCustomerName(order);
+    const customerLocation = getOrderCustomerLocation(order);
+    const payment = getOrderPaymentDetails(order);
     const issueDate = order.issueDate
       ? new Date(order.issueDate).toLocaleDateString("es-AR")
       : "";
@@ -565,362 +631,183 @@ export function PanelPage() {
       ? new Date(order.dueDate).toLocaleDateString("es-AR")
       : "Sin vencimiento";
 
-    return `
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Orden #${order.number}</title>
-          <style>
-            body {
-              margin: 0;
-              padding: 32px;
-              background: #f1f5f9;
-              color: #0f172a;
-              font-family: Arial, sans-serif;
-            }
-
-            .order {
-              width: 760px;
-              margin: 0 auto;
-              background: #ffffff;
-              border-radius: 24px;
-              padding: 34px;
-              box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
-            }
-
-            .top {
-              display: flex;
-              justify-content: space-between;
-              gap: 24px;
-              border-bottom: 2px solid #e2e8f0;
-              padding-bottom: 22px;
-              margin-bottom: 26px;
-            }
-
-            .brand-block {
-              display: flex;
-              align-items: center;
-              gap: 16px;
-            }
-
-            .brand-block img {
-              width: 68px;
-              height: 68px;
-              object-fit: contain;
-              border-radius: 18px;
-            }
-
-            .brand {
-              font-size: 13px;
-              letter-spacing: 0.18em;
-              text-transform: uppercase;
-              font-weight: 800;
-              color: #0f766e;
-            }
-
-            h1 {
-              margin: 8px 0 0;
-              font-size: 42px;
-            }
-
-            .number {
-              text-align: right;
-              font-size: 18px;
-              font-weight: 800;
-            }
-
-            .grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 18px;
-              margin-bottom: 24px;
-            }
-
-            .box {
-              border: 1px solid #e2e8f0;
-              border-radius: 18px;
-              padding: 16px;
-              background: #f8fafc;
-            }
-
-            .box span {
-              display: block;
-              font-size: 12px;
-              color: #64748b;
-              font-weight: 800;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              margin-bottom: 7px;
-            }
-
-            .box strong {
-              display: block;
-              font-size: 17px;
-            }
-
-            .detail {
-              margin: 24px 0;
-              border: 1px solid #e2e8f0;
-              border-radius: 18px;
-              overflow: hidden;
-            }
-
-            .row {
-              display: grid;
-              grid-template-columns: 1.6fr 1fr;
-              gap: 16px;
-              padding: 16px;
-              border-bottom: 1px solid #e2e8f0;
-            }
-
-            .row:last-child {
-              border-bottom: 0;
-            }
-
-            .total {
-              text-align: right;
-              margin-top: 24px;
-              font-size: 32px;
-              font-weight: 900;
-              color: #0f766e;
-            }
-
-            .payment {
-              margin-top: 28px;
-              border-radius: 18px;
-              padding: 18px;
-              background: #ecfeff;
-              border: 1px solid #67e8f9;
-            }
-
-            .payment strong {
-              display: block;
-              margin-bottom: 8px;
-            }
-
-            .payment small {
-              display: block;
-              font-size: 14px;
-              margin-top: 4px;
-            }
-
-
-            @media print {
-              body {
-                background: white;
-                padding: 0;
-              }
-
-              .order {
-                box-shadow: none;
-                width: auto;
-                border-radius: 0;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <section class="order">
-            <div class="top">
-              <div>
-                <div class="brand-block">
-                  <img src="${window.location.origin}/logo-felix.png" alt="Félix Cancelado" />
-                  <div>
-                    <div class="brand">Félix Cancelado</div>
-                    <h1>Orden</h1>
-                  </div>
-                </div>
-              </div>
-              <div class="number">
-                Orden #${order.number}<br />
-                <span>${formatOrderStatus(order.status)}</span>
-              </div>
-            </div>
-
-            <div class="grid">
-              <div class="box">
-                <span>Cliente</span>
-                <strong>${customer}</strong>
-                <p>${order.contact?.email || "Sin email"}</p>
-              </div>
-
-              <div class="box">
-                <span>Fechas</span>
-                <strong>Emisión: ${issueDate}</strong>
-                <p>Vencimiento: ${dueDate}</p>
-              </div>
-            </div>
-
-            <div class="detail">
-              <div class="row">
-                <strong>Descripción</strong>
-                <strong>Total</strong>
-              </div>
-              <div class="row">
-                <div>
-                  <strong>${order.description}</strong>
-                  <p>${order.detail || ""}</p>
-                </div>
-                <strong>${formatMoney(Number(order.total))}</strong>
-              </div>
-            </div>
-
-            <div class="total">
-              Total: ${formatMoney(Number(order.total))}
-            </div>
-
-            <div class="payment">
-              <strong>${payment.label}</strong>
-              ${payment.lines.map((line: string) => `<small>${line}</small>`).join("")}
-            </div>
-
-          </section>
-        </body>
-      </html>
-    `;
-  }
-
-  function downloadOrderPdf(order: Order) {
-    const printWindow = window.open("", "_blank", "width=900,height=1100");
-
-    if (!printWindow) {
-      setMessage("El navegador bloqueó la ventana para descargar PDF.");
-      return;
-    }
-
-    printWindow.document.open();
-    printWindow.document.write(buildOrderHtml(order));
-    printWindow.document.close();
-
-    printWindow.onload = () => {
-      printWindow.focus();
-      printWindow.print();
-    };
-  }
-
-  function downloadOrderImage(order: Order) {
-    const customer = getOrderCustomerName(order);
-    const payment = getOrderPaymentDetails(order);
     const canvas = document.createElement("canvas");
     const width = 1080;
-    const height = 1350;
+    const height = 1450;
     const context = canvas.getContext("2d");
 
     if (!context) {
-      setMessage("No se pudo generar la imagen.");
-      return;
+      throw new Error("No se pudo generar la orden.");
     }
 
     canvas.width = width;
     canvas.height = height;
 
-    context.fillStyle = "#f8fafc";
+    const logo = await loadLogoImage();
+
+    context.fillStyle = "#f1f5f9";
     context.fillRect(0, 0, width, height);
 
     context.fillStyle = "#ffffff";
-    context.roundRect(70, 70, 940, 1210, 32);
+    context.roundRect(70, 70, 940, 1310, 34);
     context.fill();
 
-    const logo = new Image();
-    logo.src = "/logo-felix.png";
+    if (logo) {
+      context.drawImage(logo, 115, 115, 86, 86);
+    }
 
-    logo.onload = () => {
-      context.drawImage(logo, 115, 115, 82, 82);
+    context.fillStyle = "#0f766e";
+    context.font = "bold 26px Arial";
+    context.fillText("FÉLIX CANCELADO", logo ? 225 : 115, 148);
 
-      context.fillStyle = "#0f766e";
-      context.font = "bold 26px Arial";
-      context.fillText("FÉLIX CANCELADO", 220, 145);
-
-      context.fillStyle = "#0f172a";
-      context.font = "bold 72px Arial";
-      context.fillText("Orden", 220, 230);
-
-      const link = document.createElement("a");
-      link.download = `orden-${order.number}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    };
-
-    logo.onerror = () => {
-      context.fillStyle = "#0f766e";
-      context.font = "bold 26px Arial";
-      context.fillText("FÉLIX CANCELADO", 115, 145);
-
-      context.fillStyle = "#0f172a";
-      context.font = "bold 72px Arial";
-      context.fillText("Orden", 115, 230);
-
-      const link = document.createElement("a");
-      link.download = `orden-${order.number}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    };
+    context.fillStyle = "#0f172a";
+    context.font = "bold 72px Arial";
+    context.fillText("Orden", logo ? 225 : 115, 232);
 
     context.font = "bold 34px Arial";
-    context.fillText(`Orden #${order.number}`, 730, 150);
+    context.fillText(`#${order.number}`, 820, 148);
 
     context.font = "24px Arial";
-    context.fillText(formatOrderStatus(order.status), 730, 190);
+    context.fillText(formatOrderStatus(order.status), 780, 190);
 
     context.strokeStyle = "#e2e8f0";
     context.lineWidth = 3;
     context.beginPath();
-    context.moveTo(115, 285);
-    context.lineTo(965, 285);
+    context.moveTo(115, 300);
+    context.lineTo(965, 300);
     context.stroke();
 
     context.fillStyle = "#64748b";
     context.font = "bold 22px Arial";
-    context.fillText("CLIENTE", 115, 355);
+    context.fillText("CLIENTE", 115, 365);
 
     context.fillStyle = "#0f172a";
     context.font = "bold 34px Arial";
-    context.fillText(customer, 115, 400);
+    formatCanvasText(context, customer, 115, 412, 780, 40, 2);
 
     context.font = "24px Arial";
-    context.fillText(order.contact?.email || "Sin email", 115, 438);
+    let customerY = 470;
+    if (order.contact?.email) {
+      context.fillText(order.contact.email, 115, customerY);
+      customerY += 36;
+    }
+
+    if (customerLocation) {
+      context.fillText(customerLocation, 115, customerY);
+    }
 
     context.fillStyle = "#64748b";
     context.font = "bold 22px Arial";
-    context.fillText("DESCRIPCIÓN", 115, 535);
+    context.fillText("FECHAS", 650, 365);
+
+    context.fillStyle = "#0f172a";
+    context.font = "24px Arial";
+    context.fillText(`Emisión: ${issueDate}`, 650, 412);
+    context.fillText(`Vence: ${dueDate}`, 650, 450);
+
+    context.fillStyle = "#f8fafc";
+    context.roundRect(115, 560, 850, 300, 26);
+    context.fill();
+
+    context.strokeStyle = "#e2e8f0";
+    context.lineWidth = 2;
+    context.strokeRect(115, 560, 850, 300);
+
+    context.fillStyle = "#64748b";
+    context.font = "bold 22px Arial";
+    context.fillText("SERVICIO / DESCRIPCIÓN", 150, 620);
 
     context.fillStyle = "#0f172a";
     context.font = "bold 34px Arial";
-    context.fillText(order.description, 115, 585);
+    let y = formatCanvasText(context, order.description || "Servicio", 150, 675, 760, 42, 3);
 
+    if (order.detail) {
+      context.fillStyle = "#334155";
+      context.font = "24px Arial";
+      y = formatCanvasText(context, order.detail, 150, y + 22, 760, 34, 5);
+    }
+
+    const subtotal = Number(order.subtotal || order.total || 0);
+    const discount = Number(order.discount || 0);
+    const total = Number(order.total || 0);
+
+    context.fillStyle = "#f8fafc";
+    context.roundRect(115, 900, 850, 180, 26);
+    context.fill();
+
+    context.fillStyle = "#64748b";
+    context.font = "bold 22px Arial";
+    context.fillText("RESUMEN", 150, 955);
+
+    context.fillStyle = "#0f172a";
     context.font = "24px Arial";
-    context.fillText(order.detail || "", 115, 625);
+    context.fillText("Subtotal", 150, 1005);
+    context.fillText(formatMoney(subtotal), 760, 1005);
+
+    context.fillText("Descuento", 150, 1045);
+    context.fillText(formatMoney(discount), 760, 1045);
 
     context.fillStyle = "#0f766e";
-    context.font = "bold 62px Arial";
-    context.fillText(`Total: ${formatMoney(Number(order.total))}`, 115, 755);
+    context.font = "bold 54px Arial";
+    context.fillText(`Total: ${formatMoney(total)}`, 150, 1145);
 
     context.fillStyle = "#ecfeff";
-    context.roundRect(115, 835, 850, 230, 26);
+    context.roundRect(115, 1210, 850, 125, 26);
     context.fill();
 
     context.fillStyle = "#0f172a";
-    context.font = "bold 30px Arial";
-    context.fillText(payment.label, 150, 900);
+    context.font = "bold 28px Arial";
+    context.fillText(payment.label, 150, 1260);
 
-    context.font = "24px Arial";
+    context.font = "22px Arial";
     payment.lines.forEach((line: string, index: number) => {
-      context.fillText(line, 150, 950 + index * 36);
+      context.fillText(line, 150, 1300 + index * 30);
     });
 
+    return canvas;
+  }
 
+  async function downloadOrderPdf(order: Order) {
+    try {
+      const canvas = await buildOrderCanvas(order);
+      const imageData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imageData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(`orden-${order.number}.pdf`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo descargar el PDF.");
+    }
+  }
+
+  async function downloadOrderImage(order: Order) {
+    try {
+      const canvas = await buildOrderCanvas(order);
+      const link = document.createElement("a");
+      link.download = `orden-${order.number}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo descargar la imagen.");
+    }
   }
 
   function prepareEmailOrder(order: Order, mode: "send" | "resend") {
     const hasAttachment = Boolean(order.document?.fileName);
     const action = mode === "send" ? "Envío" : "Reenvío";
+
     setMessage(
       `${action} preparado para la orden #${order.number} ${
         hasAttachment ? "con adjunto." : "sin adjunto."
       } Falta conectar el envío real por email.`
     );
   }
+
 
   function handleLogout() {
     localStorage.removeItem("orders_panel_token");
