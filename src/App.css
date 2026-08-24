@@ -2071,3 +2071,202 @@
     font-size: 1rem;
   }
 }
+/* =========================================================
+   APP CARDS GRID V2
+   4 columnas desktop + textos completos mobile
+   ========================================================= */
+
+/* Las keywords ya no forman parte visual de las tarjetas */
+.app-tags {
+  display: none !important;
+}
+
+/* Cuerpo más limpio sin el bloque de keywords */
+.app-card-body {
+  min-height: 250px;
+  padding: 22px 22px 19px;
+}
+
+.app-category {
+  margin-bottom: 6px;
+}
+
+.app-card h3 {
+  min-height: 0;
+  font-size: clamp(1.55rem, 2vw, 2rem);
+  line-height: 1.05;
+}
+
+.app-description {
+  min-height: 4.65em;
+  margin-top: 11px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.app-card-action {
+  margin-top: auto;
+}
+
+/* =========================================================
+   LAPTOP / DESKTOP GRANDE
+   Preparado para cuatro apps por fila
+   ========================================================= */
+
+@media (min-width: 1100px) {
+  .apps-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .app-card {
+    border-radius: 22px;
+  }
+
+  /* Mismo header visual, solamente escalado */
+  .app-card-top {
+    min-height: 205px;
+    padding: 20px 13px;
+    gap: 12px;
+  }
+
+  .app-status {
+    top: 13px;
+    right: 13px;
+    padding: 6px 8px;
+    gap: 5px;
+    font-size: 0.61rem;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .codespeak-logo {
+    width: 88px;
+    height: 88px;
+    border-radius: 21px;
+  }
+
+  .codespeak-logo strong {
+    font-size: 2.3rem;
+  }
+
+  .code-symbol {
+    top: 10px;
+    left: 11px;
+    font-size: 0.58rem;
+  }
+
+  .speech-bubble {
+    max-width: 120px;
+    box-sizing: border-box;
+    padding: 12px 12px;
+    border-radius: 14px;
+    font-size: 0.68rem;
+    line-height: 1.4;
+  }
+
+  .speech-bubble::before {
+    left: -7px;
+    width: 12px;
+    height: 12px;
+  }
+
+  .app-image {
+    width: min(142px, 70%);
+    border-radius: 22px;
+  }
+
+  .app-card-body {
+    min-height: 255px;
+    padding: 19px 17px 16px;
+  }
+
+  .app-category {
+    font-size: 0.61rem;
+    letter-spacing: 0.12em;
+  }
+
+  .app-card h3 {
+    font-size: 1.4rem;
+    line-height: 1.05;
+  }
+
+  .app-description {
+    min-height: 6.2em;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    line-height: 1.48;
+    -webkit-line-clamp: 4;
+  }
+
+  .app-card-action {
+    padding: 10px 11px;
+    border-radius: 10px;
+    font-size: 0.71rem;
+  }
+
+  .action-arrow {
+    font-size: 1.1rem;
+  }
+}
+
+/* =========================================================
+   TABLET / LAPTOP PEQUEÑA
+   Dos columnas para evitar tarjetas enormes
+   ========================================================= */
+
+@media (min-width: 641px) and (max-width: 1099px) {
+  .apps-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .app-card-body {
+    min-height: 240px;
+    padding: 20px;
+  }
+
+  .app-description {
+    min-height: 4.7em;
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* =========================================================
+   MOVIL
+   Conserva 2 columnas, pero muestra toda la explicación
+   ========================================================= */
+
+@media (max-width: 640px) {
+  .app-card-body {
+    min-height: 0;
+    padding: 13px 10px 11px;
+  }
+
+  .app-card h3 {
+    min-height: 0;
+    font-size: 0.94rem;
+    line-height: 1.08;
+  }
+
+  .app-description {
+    min-height: 0;
+    margin-top: 8px;
+
+    display: block;
+    overflow: visible;
+
+    font-size: 0.68rem;
+    line-height: 1.38;
+
+    -webkit-box-orient: initial;
+    -webkit-line-clamp: unset;
+  }
+
+  .app-card-action {
+    margin-top: 11px;
+  }
+}

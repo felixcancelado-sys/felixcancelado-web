@@ -27,7 +27,7 @@ const learningApps: LearningApp[] = [
   },
   {
     id: "gran-caldas",
-    name: "Gran Caldas Escuela Nueva",
+    name: "Gran Caldas",
     category: "Educación solidaria",
     description:
       "Plataforma educativa para mantener activo el proceso de enseñanza-aprendizaje en primaria durante contingencias o reconstrucción.",
@@ -425,12 +425,6 @@ function App() {
                   <p className="app-category">{app.category}</p>
                   <h3>{app.name}</h3>
                   <p className="app-description">{app.description}</p>
-
-                  <div className="app-tags">
-                    {app.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                  </div>
 
                   <div className="app-card-action">
                     <span>Entrar a {app.name}</span>
