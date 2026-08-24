@@ -801,15 +801,48 @@ export function PanelPage() {
     }
   }
 
-  function prepareEmailOrder(order: Order, mode: "send" | "resend") {
-    const hasAttachment = Boolean(order.document?.fileName);
-    const action = mode === "send" ? "Envío" : "Reenvío";
+  async function prepareEmailOrder(order: Order, mode: "send" | "resend") {
+    if (!order.contact?.email) {
+      setMessage(`La orden #${order.number} no tiene un email de contacto.`);
+      return;
+    }
 
-    setMessage(
-      `${action} preparado para la orden #${order.number} ${
-        hasAttachment ? "con adjunto." : "sin adjunto."
-      } Falta conectar el envío real por email.`
-    );
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      const response = await apiFetch(`/api/panel/orders/${order.id}/send`, {
+        method: "POST",
+        body: JSON.stringify({
+          type: mode === "send" ? "INITIAL" : "RESEND",
+        }),
+      });
+
+      const data = (await response.json()) as {
+        ok: boolean;
+        emailTo: string;
+        includedLegalDocument: boolean;
+      };
+
+      const action = mode === "send" ? "enviada" : "reenviada";
+
+      setMessage(
+        `Orden #${order.number} ${action} a ${data.emailTo}${
+          data.includedLegalDocument ? " con PDF adjunto." : " sin PDF adjunto."
+        }`
+      );
+
+      await loadOrders();
+      await loadPendingOrders();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo enviar la orden por email."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }
 
 
