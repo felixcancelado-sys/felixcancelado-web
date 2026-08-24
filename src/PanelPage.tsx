@@ -649,6 +649,7 @@ export function PanelPage() {
     context.fillRect(0, 0, width, height);
 
     context.fillStyle = "#ffffff";
+    context.beginPath();
     context.roundRect(70, 70, 940, 1310, 34);
     context.fill();
 
@@ -706,6 +707,7 @@ export function PanelPage() {
     context.fillText(`Vence: ${dueDate}`, 650, 450);
 
     context.fillStyle = "#f8fafc";
+    context.beginPath();
     context.roundRect(115, 560, 850, 300, 26);
     context.fill();
 
@@ -732,6 +734,7 @@ export function PanelPage() {
     const total = Number(order.total || 0);
 
     context.fillStyle = "#f8fafc";
+    context.beginPath();
     context.roundRect(115, 900, 850, 180, 26);
     context.fill();
 
@@ -752,6 +755,7 @@ export function PanelPage() {
     context.fillText(`Total: ${formatMoney(total)}`, 150, 1145);
 
     context.fillStyle = "#ecfeff";
+    context.beginPath();
     context.roundRect(115, 1210, 850, 125, 26);
     context.fill();
 
@@ -1570,8 +1574,3 @@ export function PanelPage() {
     </div>
   );
 }
-
-
-
-
-
