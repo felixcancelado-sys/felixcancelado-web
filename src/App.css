@@ -1554,3 +1554,33 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* PANEL CONTACT SUBMENU */
+
+.panel-subtabs {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin: 8px 0 20px !important;
+}
+
+.panel-subtabs button {
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 999px !important;
+  padding: 10px 16px !important;
+  color: rgba(248, 250, 252, 0.88) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  font: inherit !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+}
+
+.panel-subtabs button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.panel-subtab-active {
+  color: #042f2e !important;
+  border-color: transparent !important;
+  background: linear-gradient(135deg, #67e8f9, #34d399) !important;
+}

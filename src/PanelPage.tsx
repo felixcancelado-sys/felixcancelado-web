@@ -18,6 +18,7 @@ type Contact = {
   country?: string | null;
   city?: string | null;
   company?: string | null;
+  notes?: string | null;
   status?: string;
 };
 
@@ -38,6 +39,7 @@ type Order = {
 };
 
 type PanelSection = "dashboard" | "contacts" | "orders" | "pending";
+type ContactView = "create" | "list";
 
 const API_BASE_URL = import.meta.env.VITE_ORDERS_API_URL || "";
 
@@ -54,10 +56,13 @@ export function PanelPage() {
   const [password, setPassword] = useState("");
   const [token, setToken] = useState(() => localStorage.getItem("orders_panel_token") || "");
   const [section, setSection] = useState<PanelSection>("dashboard");
+  const [contactView, setContactView] = useState<ContactView>("create");
+
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+
   const [contactForm, setContactForm] = useState({
     firstName: "",
     lastName: "",
@@ -68,6 +73,7 @@ export function PanelPage() {
     company: "",
     notes: "",
   });
+
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -222,6 +228,7 @@ export function PanelPage() {
       });
 
       await loadContacts();
+      setContactView("list");
       setMessage("Contacto creado.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Error al crear contacto.");
@@ -250,7 +257,7 @@ export function PanelPage() {
       loadDashboard().catch(() => setMessage("No se pudo cargar el panel."));
     }
 
-    if (section === "contacts") {
+    if (section === "contacts" && contactView === "list") {
       loadContacts().catch(() => setMessage("No se pudieron cargar los contactos."));
     }
 
@@ -261,7 +268,7 @@ export function PanelPage() {
     if (section === "pending") {
       loadPendingOrders().catch(() => setMessage("No se pudieron cargar los pendientes."));
     }
-  }, [section, token]);
+  }, [section, contactView, token]);
 
   return (
     <div className="panel-shell">
@@ -405,6 +412,181 @@ export function PanelPage() {
               </>
             ) : null}
 
+            {section === "contacts" ? (
+              <section className="panel-contacts">
+                <div className="panel-section-title">
+                  <div>
+                    <h2>Contactos</h2>
+                    <p>Base privada para clientes, pendientes y órdenes.</p>
+                  </div>
+
+                  <strong>{contacts.length} contacto(s)</strong>
+                </div>
+
+                <div className="panel-subtabs">
+                  <button
+                    type="button"
+                    className={contactView === "create" ? "panel-subtab-active" : ""}
+                    onClick={() => setContactView("create")}
+                  >
+                    Crear contacto
+                  </button>
+
+                  <button
+                    type="button"
+                    className={contactView === "list" ? "panel-subtab-active" : ""}
+                    onClick={() => setContactView("list")}
+                  >
+                    Listar contactos
+                  </button>
+                </div>
+
+                {contactView === "create" ? (
+                  <form className="panel-contact-form" onSubmit={handleCreateContact}>
+                    <label>
+                      Nombre *
+                      <input
+                        value={contactForm.firstName}
+                        onChange={(event) =>
+                          setContactForm((current) => ({
+                            ...current,
+                            firstName: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Apellido
+                      <input
+                        value={contactForm.lastName}
+                        onChange={(event) =>
+                          setContactForm((current) => ({
+                            ...current,
+                            lastName: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Email
+                      <input
+                        type="email"
+                        value={contactForm.email}
+                        onChange={(event) =>
+                          setContactForm((current) => ({
+                            ...current,
+                            email: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Teléfono
+                      <input
+                        value={contactForm.phone}
+                        onChange={(event) =>
+                          setContactForm((current) => ({
+                            ...current,
+                            phone: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      País
+                      <input
+                        value={contactForm.country}
+                        onChange={(event) =>
+                          setContactForm((current) => ({
+                            ...current,
+                            country: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Ciudad
+                      <input
+                        value={contactForm.city}
+                        onChange={(event) =>
+                          setContactForm((current) => ({
+                            ...current,
+                            city: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Empresa
+                      <input
+                        value={contactForm.company}
+                        onChange={(event) =>
+                          setContactForm((current) => ({
+                            ...current,
+                            company: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label className="panel-contact-notes">
+                      Notas
+                      <textarea
+                        value={contactForm.notes}
+                        onChange={(event) =>
+                          setContactForm((current) => ({
+                            ...current,
+                            notes: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <button type="submit" disabled={isLoading}>
+                      {isLoading ? "Guardando..." : "Crear contacto"}
+                    </button>
+                  </form>
+                ) : null}
+
+                {contactView === "list" ? (
+                  <div className="panel-contact-list">
+                    {contacts.length === 0 ? (
+                      <div className="panel-empty">
+                        <p>Aún no hay contactos cargados.</p>
+                      </div>
+                    ) : (
+                      contacts.map((contact) => (
+                        <article key={contact.id} className="panel-contact-item">
+                          <div>
+                            <strong>
+                              {contact.firstName} {contact.lastName || ""}
+                            </strong>
+                            <span>{contact.email || "Sin email"}</span>
+                            <span>{contact.phone || "Sin teléfono"}</span>
+                          </div>
+
+                          <div>
+                            <span>{contact.company || "Sin empresa"}</span>
+                            <span>
+                              {[contact.city, contact.country].filter(Boolean).join(", ") ||
+                                "Sin ubicación"}
+                            </span>
+                            <span>{contact.notes || "Sin notas"}</span>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
             {section === "orders" ? (
               <section className="panel-orders">
                 <div className="panel-section-title">
@@ -474,157 +656,6 @@ export function PanelPage() {
                 </div>
               </section>
             ) : null}
-
-            {section === "contacts" ? (
-              <section className="panel-contacts">
-                <div className="panel-section-title">
-                  <div>
-                    <h2>Contactos</h2>
-                    <p>Base privada para clientes, pendientes y órdenes.</p>
-                  </div>
-
-                  <strong>{contacts.length} contacto(s)</strong>
-                </div>
-
-                <form className="panel-contact-form" onSubmit={handleCreateContact}>
-                  <label>
-                    Nombre *
-                    <input
-                      value={contactForm.firstName}
-                      onChange={(event) =>
-                        setContactForm((current) => ({
-                          ...current,
-                          firstName: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Apellido
-                    <input
-                      value={contactForm.lastName}
-                      onChange={(event) =>
-                        setContactForm((current) => ({
-                          ...current,
-                          lastName: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Email
-                    <input
-                      type="email"
-                      value={contactForm.email}
-                      onChange={(event) =>
-                        setContactForm((current) => ({
-                          ...current,
-                          email: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Teléfono
-                    <input
-                      value={contactForm.phone}
-                      onChange={(event) =>
-                        setContactForm((current) => ({
-                          ...current,
-                          phone: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    País
-                    <input
-                      value={contactForm.country}
-                      onChange={(event) =>
-                        setContactForm((current) => ({
-                          ...current,
-                          country: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Ciudad
-                    <input
-                      value={contactForm.city}
-                      onChange={(event) =>
-                        setContactForm((current) => ({
-                          ...current,
-                          city: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Empresa
-                    <input
-                      value={contactForm.company}
-                      onChange={(event) =>
-                        setContactForm((current) => ({
-                          ...current,
-                          company: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <label className="panel-contact-notes">
-                    Notas
-                    <textarea
-                      value={contactForm.notes}
-                      onChange={(event) =>
-                        setContactForm((current) => ({
-                          ...current,
-                          notes: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-
-                  <button type="submit" disabled={isLoading}>
-                    {isLoading ? "Guardando..." : "Crear contacto"}
-                  </button>
-                </form>
-
-                <div className="panel-contact-list">
-                  {contacts.length === 0 ? (
-                    <div className="panel-empty">
-                      <p>Aún no hay contactos cargados.</p>
-                    </div>
-                  ) : (
-                    contacts.map((contact) => (
-                      <article key={contact.id} className="panel-contact-item">
-                        <div>
-                          <strong>
-                            {contact.firstName} {contact.lastName || ""}
-                          </strong>
-                          <span>{contact.email || "Sin email"}</span>
-                        </div>
-
-                        <div>
-                          <span>{contact.company || "Sin empresa"}</span>
-                          <span>
-                            {[contact.city, contact.country].filter(Boolean).join(", ") ||
-                              "Sin ubicación"}
-                          </span>
-                        </div>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </section>
-            ) : null}
           </section>
         )}
 
@@ -633,4 +664,3 @@ export function PanelPage() {
     </div>
   );
 }
-
