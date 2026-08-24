@@ -1286,13 +1286,12 @@
 
 .panel-metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .panel-metrics article,
-.panel-empty,
-.panel-next {
+.panel-empty {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 22px;
   padding: 18px;
@@ -1310,18 +1309,11 @@
 .panel-metrics strong {
   display: block;
   margin-top: 10px;
-  font-size: clamp(1.35rem, 4vw, 2.1rem);
+  font-size: clamp(1.45rem, 2.3vw, 1.95rem);
+  line-height: 1.05;
+  white-space: nowrap;
 }
 
-.panel-next {
-  margin-top: 18px;
-}
-
-.panel-next h2 {
-  margin: 0 0 8px;
-}
-
-.panel-next p,
 .panel-empty p {
   color: rgba(248, 250, 252, 0.72);
 }
@@ -1344,9 +1336,11 @@
   .panel-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .panel-metrics article:last-child {
-    grid-column: 1 / -1;
+@media (max-width: 480px) {
+  .panel-metrics {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1871,4 +1865,58 @@
 
 .panel-order-actions-row .panel-small-action {
   margin-top: 0 !important;
+}
+
+/* PANEL DASHBOARD TOTAL + MES A MES */
+
+.panel-dashboard-subtabs {
+  margin-top: 0 !important;
+}
+
+.panel-month-selector {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.panel-month-selector label {
+  display: grid;
+  gap: 7px;
+  color: rgba(248, 250, 252, 0.72);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.panel-month-selector input {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  padding: 10px 13px;
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.09);
+  font: inherit;
+  color-scheme: dark;
+}
+
+.panel-month-selector strong {
+  color: #bae6fd;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+@media (max-width: 560px) {
+  .panel-month-selector {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-month-selector input {
+    width: 100%;
+    box-sizing: border-box;
+  }
 }

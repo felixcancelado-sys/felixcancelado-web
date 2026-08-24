@@ -57,6 +57,7 @@ type ContactView = "create" | "list";
 type OrderView = "create" | "list";
 type BillingMode = "hours" | "service";
 type PaymentRegion = "argentina" | "colombia" | "world";
+type DashboardView = "aggregate" | "monthly";
 
 const API_BASE_URL = import.meta.env.VITE_ORDERS_API_URL || "";
 
@@ -155,6 +156,11 @@ export function PanelPage() {
   const [section, setSection] = useState<PanelSection>("dashboard");
   const [contactView, setContactView] = useState<ContactView>("create");
   const [orderView, setOrderView] = useState<OrderView>("create");
+  const [dashboardView, setDashboardView] = useState<DashboardView>("aggregate");
+  const [dashboardMonth, setDashboardMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -211,6 +217,53 @@ export function PanelPage() {
   }, [orderForm.discount]);
 
   const estimatedTotal = Math.max(estimatedSubtotal - estimatedDiscount, 0);
+
+  const monthlyDashboard = useMemo<DashboardData>(() => {
+    const monthOrders = orders.filter((order) => {
+      return (
+        order.issueDate?.slice(0, 7) === dashboardMonth &&
+        order.status !== "CANCELLED"
+      );
+    });
+
+    const totalSold = monthOrders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0
+    );
+
+    const totalPaid = monthOrders
+      .filter((order) => order.status === "PAID")
+      .reduce((sum, order) => sum + Number(order.total || 0), 0);
+
+    const unpaidOrders = monthOrders.filter(
+      (order) => order.status !== "PAID"
+    );
+
+    const pending = unpaidOrders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0
+    );
+
+    return {
+      ordersCount: monthOrders.length,
+      totalSold,
+      totalPaid,
+      pending,
+      unpaidCount: unpaidOrders.length,
+    };
+  }, [orders, dashboardMonth]);
+
+  const dashboardMonthLabel = useMemo(() => {
+    const [year, month] = dashboardMonth.split("-").map(Number);
+
+    return new Intl.DateTimeFormat("es-AR", {
+      month: "long",
+      year: "numeric",
+    }).format(new Date(year, month - 1, 1));
+  }, [dashboardMonth]);
+
+  const activeDashboard =
+    dashboardView === "monthly" ? monthlyDashboard : dashboard;
 
 
   const selectedPaymentDetails = useMemo(() => {
@@ -397,7 +450,10 @@ export function PanelPage() {
 
     try {
       if (section === "dashboard") {
-        await loadDashboard();
+        await Promise.all([
+          loadDashboard(),
+          loadOrders(),
+        ]);
       }
 
       if (section === "contacts") {
@@ -925,8 +981,12 @@ export function PanelPage() {
       return;
     }
 
-    if (section === "dashboard" && !dashboard) {
-      loadDashboard().catch(() => setMessage("No se pudo cargar el panel."));
+    if (section === "dashboard") {
+      if (!dashboard) {
+        loadDashboard().catch(() => setMessage("No se pudo cargar el panel."));
+      }
+
+      loadOrders().catch(() => setMessage("No se pudieron cargar las ordenes."));
     }
 
     if (section === "contacts" && contactView === "list") {
@@ -1040,7 +1100,50 @@ export function PanelPage() {
 
             {section === "dashboard" ? (
               <>
-                {!dashboard ? (
+                <div className="panel-subtabs panel-dashboard-subtabs">
+                  <button
+                    type="button"
+                    className={
+                      dashboardView === "aggregate"
+                        ? "panel-subtab-active"
+                        : ""
+                    }
+                    onClick={() => setDashboardView("aggregate")}
+                  >
+                    Total acumulado
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      dashboardView === "monthly"
+                        ? "panel-subtab-active"
+                        : ""
+                    }
+                    onClick={() => setDashboardView("monthly")}
+                  >
+                    Mes a mes
+                  </button>
+                </div>
+
+                {dashboardView === "monthly" ? (
+                  <div className="panel-month-selector">
+                    <label>
+                      Consultar mes
+                      <input
+                        type="month"
+                        value={dashboardMonth}
+                        onChange={(event) =>
+                          setDashboardMonth(event.target.value)
+                        }
+                      />
+                    </label>
+
+                    <strong>{dashboardMonthLabel}</strong>
+                  </div>
+                ) : null}
+
+                {!activeDashboard ? (
                   <div className="panel-empty">
                     <p>Ingreso correcto. Actualiza el panel para ver los datos.</p>
                   </div>
@@ -1048,43 +1151,32 @@ export function PanelPage() {
                   <div className="panel-metrics">
                     <article>
                       <span>Órdenes</span>
-                      <strong>{dashboard.ordersCount}</strong>
+                      <strong>{activeDashboard.ordersCount}</strong>
                     </article>
 
                     <article>
                       <span>Total vendido</span>
-                      <strong>{formatMoney(dashboard.totalSold)}</strong>
+                      <strong>{formatMoney(activeDashboard.totalSold)}</strong>
                     </article>
 
                     <article>
                       <span>Total cobrado</span>
-                      <strong>{formatMoney(dashboard.totalPaid)}</strong>
+                      <strong>{formatMoney(activeDashboard.totalPaid)}</strong>
                     </article>
 
                     <article>
                       <span>Pendiente</span>
-                      <strong>{formatMoney(dashboard.pending)}</strong>
+                      <strong>{formatMoney(activeDashboard.pending)}</strong>
                     </article>
 
                     <article>
                       <span>Sin pagar</span>
-                      <strong>{dashboard.unpaidCount}</strong>
+                      <strong>{activeDashboard.unpaidCount}</strong>
                     </article>
                   </div>
                 )}
-
-                <div className="panel-next">
-                  <h2>Próximo paso</h2>
-                  <p>
-                    Crear módulos de Contactos, Órdenes, Pendientes, Reportes y Configuración.
-                  </p>
-                  <p>
-                    La primera orden real debe conservar el consecutivo #682.
-                  </p>
-                </div>
               </>
             ) : null}
-
             {section === "contacts" ? (
               <section className="panel-contacts">
                 <div className="panel-section-title">
