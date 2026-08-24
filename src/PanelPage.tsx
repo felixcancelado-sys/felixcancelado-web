@@ -827,6 +827,43 @@ export function PanelPage() {
       setIsLoading(false);
     }
   }
+  async function markOrderAsPaid(order: Order) {
+    const confirmed = window.confirm(
+      `¿Marcar la orden #${order.number} como pagada?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      await apiFetch(`/api/panel/orders/${order.id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "PAID",
+        }),
+      });
+
+      await Promise.all([
+        loadPendingOrders(),
+        loadOrders(),
+        loadDashboard(),
+      ]);
+
+      setMessage(`Orden #${order.number} marcada como pagada.`);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo marcar la orden como pagada."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
   async function prepareEmailOrder(order: Order, mode: "send" | "resend") {
     if (!order.contact?.email) {
       setMessage(`La orden #${order.number} no tiene un email de contacto.`);
@@ -1637,13 +1674,25 @@ export function PanelPage() {
                           <strong>{formatMoney(Number(order.total))}</strong>
                           <span>{formatOrderStatus(order.status)}</span>
 
-                          <button
-                            type="button"
-                            className="panel-small-action"
-                            onClick={() => prepareEmailOrder(order, "resend")}
-                          >
-                            Reenviar orden
-                          </button>
+                          <div className="panel-order-actions-row">
+                            <button
+                              type="button"
+                              className="panel-small-action"
+                              disabled={isLoading}
+                              onClick={() => prepareEmailOrder(order, "resend")}
+                            >
+                              Reenviar orden
+                            </button>
+
+                            <button
+                              type="button"
+                              className="panel-small-action"
+                              disabled={isLoading}
+                              onClick={() => markOrderAsPaid(order)}
+                            >
+                              Marcar como pagada
+                            </button>
+                          </div>
                         </div>
                       </article>
                     ))
