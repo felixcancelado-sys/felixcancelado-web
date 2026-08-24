@@ -38,6 +38,88 @@ const learningApps: LearningApp[] = [
   },
 ];
 
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm17 2.24-7.45 6.2a1 1 0 0 1-1.1 0L4 7.24V17h16V7.24ZM18.43 7H5.57L12 12.36 18.43 7Z"
+      />
+    </svg>
+  );
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12.04 2A9.84 9.84 0 0 0 3.6 16.91L2 22l5.22-1.54A9.86 9.86 0 1 0 12.04 2Zm0 17.72a7.83 7.83 0 0 1-4-1.1l-.29-.17-3.1.92.95-3.02-.19-.31a7.84 7.84 0 1 1 6.63 3.68Zm4.3-5.87c-.24-.12-1.4-.69-1.62-.77-.22-.08-.38-.12-.54.12-.16.24-.61.77-.74.93-.14.16-.28.18-.52.06-.24-.12-.99-.37-1.89-1.16a7.1 7.1 0 0 1-1.3-1.62c-.14-.24-.02-.36.1-.48.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.77-.19-.47-.39-.4-.54-.41h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.69 2.59 4.1 3.63.57.25 1.02.4 1.37.51.58.18 1.1.16 1.52.1.46-.07 1.4-.57 1.6-1.13.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28Z"
+      />
+    </svg>
+  );
+}
+
+function YouTubeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M23.5 6.2a3 3 0 0 0-2.1-2.12C19.53 3.5 12 3.5 12 3.5s-7.53 0-9.4.58A3 3 0 0 0 .5 6.2 31.2 31.2 0 0 0 0 12a31.2 31.2 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.12C4.47 20.5 12 20.5 12 20.5s7.53 0 9.4-.58a3 3 0 0 0 2.1-2.12A31.2 31.2 0 0 0 24 12a31.2 31.2 0 0 0-.5-5.8ZM9.6 15.58V8.42L15.82 12 9.6 15.58Z"
+      />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9a5.5 5.5 0 0 1-5.5 5.5h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm0 2A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4h-9Zm9.75 1.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"
+      />
+    </svg>
+  );
+}
+
+function FooterSocialLinks() {
+  return (
+    <div className="footer-socials">
+      <a
+        className="footer-social footer-social-whatsapp"
+        href="https://wa.me/5491150514466"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Contactar por WhatsApp"
+        title="WhatsApp"
+      >
+        <WhatsAppIcon />
+      </a>
+
+      <a
+        className="footer-social footer-social-youtube"
+        href="https://www.youtube.com/@felixcancelado"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="YouTube de Félix Cancelado"
+        title="YouTube"
+      >
+        <YouTubeIcon />
+      </a>
+
+      <a
+        className="footer-social footer-social-instagram"
+        href="https://www.instagram.com/felix.cancelado/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Instagram de Félix Cancelado"
+        title="Instagram"
+      >
+        <InstagramIcon />
+      </a>
+    </div>
+  );
+}
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState(window.location.hash || "#inicio");
@@ -177,7 +259,7 @@ function App() {
 
         <footer className="site-footer">
           <span>© {new Date().getFullYear()} Félix Cancelado</span>
-          <span>Educación + Tecnología</span>
+          <FooterSocialLinks />
         </footer>
       </div>
     );
@@ -263,8 +345,19 @@ function App() {
                 <a
                   className="contact-button"
                   href="mailto:felixcancelado@gmail.com"
+                  aria-label="Enviar email a Félix Cancelado"
                 >
-                  <span>felixcancelado@gmail.com</span>
+                  <span className="contact-channel-main">
+                    <span className="contact-brand-icon contact-brand-email">
+                      <MailIcon />
+                    </span>
+
+                    <span className="contact-channel-copy">
+                      <strong>Email</strong>
+                      <small>felixcancelado@gmail.com</small>
+                    </span>
+                  </span>
+
                   <span aria-hidden="true">→</span>
                 </a>
 
@@ -275,7 +368,17 @@ function App() {
                   rel="noopener noreferrer"
                   aria-label="Contactar a Félix Cancelado por WhatsApp"
                 >
-                  <span>WhatsApp · +54 9 11 5051-4466</span>
+                  <span className="contact-channel-main">
+                    <span className="contact-brand-icon contact-brand-whatsapp">
+                      <WhatsAppIcon />
+                    </span>
+
+                    <span className="contact-channel-copy">
+                      <strong>WhatsApp</strong>
+                      <small>+54 9 11 5051-4466</small>
+                    </span>
+                  </span>
+
                   <span aria-hidden="true">→</span>
                 </a>
               </div>
@@ -293,11 +396,19 @@ function App() {
                   href="https://www.youtube.com/@felixcancelado"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Ir al canal de YouTube de Félix Cancelado"
                 >
-                  <span>
-                    <strong>YouTube</strong>
-                    <small>@felixcancelado</small>
+                  <span className="social-channel-main">
+                    <span className="contact-brand-icon contact-brand-youtube">
+                      <YouTubeIcon />
+                    </span>
+
+                    <span className="social-channel-copy">
+                      <strong>YouTube</strong>
+                      <small>@felixcancelado</small>
+                    </span>
                   </span>
+
                   <span aria-hidden="true">→</span>
                 </a>
 
@@ -306,11 +417,19 @@ function App() {
                   href="https://www.instagram.com/felix.cancelado/"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Ir al Instagram de Félix Cancelado"
                 >
-                  <span>
-                    <strong>Instagram</strong>
-                    <small>@felix.cancelado</small>
+                  <span className="social-channel-main">
+                    <span className="contact-brand-icon contact-brand-instagram">
+                      <InstagramIcon />
+                    </span>
+
+                    <span className="social-channel-copy">
+                      <strong>Instagram</strong>
+                      <small>@felix.cancelado</small>
+                    </span>
                   </span>
+
                   <span aria-hidden="true">→</span>
                 </a>
               </div>
@@ -320,7 +439,7 @@ function App() {
 
         <footer className="site-footer">
           <span>© {new Date().getFullYear()} Félix Cancelado</span>
-          <span>Educación + Tecnología</span>
+          <FooterSocialLinks />
         </footer>
       </div>
     );
@@ -489,9 +608,9 @@ function App() {
       </main>
 
       <footer className="site-footer">
-        <span>© {new Date().getFullYear()} Félix Cancelado</span>
-        <span>Educación + Tecnología</span>
-      </footer>
+          <span>© {new Date().getFullYear()} Félix Cancelado</span>
+          <FooterSocialLinks />
+        </footer>
     </div>
   );
 }
