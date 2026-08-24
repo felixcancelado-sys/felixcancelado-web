@@ -1842,3 +1842,20 @@
   font-weight: 900 !important;
   cursor: pointer !important;
 }
+
+/* PANEL SMALL ACTIONS */
+
+.panel-small-action {
+  margin-top: 10px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  padding: 9px 13px !important;
+  color: #042f2e !important;
+  background: linear-gradient(135deg, #67e8f9, #34d399) !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+.panel-small-action:hover {
+  transform: translateY(-1px) !important;
+}

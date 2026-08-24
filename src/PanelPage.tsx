@@ -238,7 +238,7 @@ export function PanelPage() {
     const query = orderContactSearch.toLowerCase().trim();
 
     if (!query) {
-      return contacts.slice(0, 40);
+      return [];
     }
 
     return contacts
@@ -943,7 +943,9 @@ export function PanelPage() {
                       </label>
 
                       <div className="panel-contact-picker-list">
-                        {filteredOrderContacts.length === 0 ? (
+                        {!orderContactSearch.trim() ? (
+                          <span>Escribe para buscar un contacto.</span>
+                        ) : filteredOrderContacts.length === 0 ? (
                           <span>No hay contactos para esa búsqueda.</span>
                         ) : (
                           filteredOrderContacts.map((contact) => (
@@ -1251,6 +1253,18 @@ export function PanelPage() {
                         <div>
                           <strong>{formatMoney(Number(order.total))}</strong>
                           <span>{formatOrderStatus(order.status)}</span>
+
+                          <button
+                            type="button"
+                            className="panel-small-action"
+                            onClick={() =>
+                              setMessage(
+                                `Reenvío preparado para la orden #${order.number}. Falta conectar el envío real por email.`
+                              )
+                            }
+                          >
+                            Reenviar orden
+                          </button>
                         </div>
                       </article>
                     ))
@@ -1266,5 +1280,6 @@ export function PanelPage() {
     </div>
   );
 }
+
 
 
