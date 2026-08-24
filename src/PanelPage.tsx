@@ -598,6 +598,19 @@ export function PanelPage() {
               margin-bottom: 26px;
             }
 
+            .brand-block {
+              display: flex;
+              align-items: center;
+              gap: 16px;
+            }
+
+            .brand-block img {
+              width: 68px;
+              height: 68px;
+              object-fit: contain;
+              border-radius: 18px;
+            }
+
             .brand {
               font-size: 13px;
               letter-spacing: 0.18em;
@@ -692,12 +705,6 @@ export function PanelPage() {
               margin-top: 4px;
             }
 
-            .note {
-              margin-top: 22px;
-              font-size: 12px;
-              color: #64748b;
-              line-height: 1.5;
-            }
 
             @media print {
               body {
@@ -717,8 +724,13 @@ export function PanelPage() {
           <section class="order">
             <div class="top">
               <div>
-                <div class="brand">Félix Cancelado</div>
-                <h1>Orden</h1>
+                <div class="brand-block">
+                  <img src="${window.location.origin}/logo-felix.png" alt="Félix Cancelado" />
+                  <div>
+                    <div class="brand">Félix Cancelado</div>
+                    <h1>Orden</h1>
+                  </div>
+                </div>
               </div>
               <div class="number">
                 Orden #${order.number}<br />
@@ -763,10 +775,6 @@ export function PanelPage() {
               ${payment.lines.map((line: string) => `<small>${line}</small>`).join("")}
             </div>
 
-            <p class="note">
-              Esta orden no constituye factura legal ni comprobante fiscal.
-              El documento legal correspondiente se adjunta cuando aplica.
-            </p>
           </section>
         </body>
       </html>
@@ -814,13 +822,40 @@ export function PanelPage() {
     context.roundRect(70, 70, 940, 1210, 32);
     context.fill();
 
-    context.fillStyle = "#0f766e";
-    context.font = "bold 26px Arial";
-    context.fillText("FÉLIX CANCELADO", 115, 145);
+    const logo = new Image();
+    logo.src = "/logo-felix.png";
 
-    context.fillStyle = "#0f172a";
-    context.font = "bold 72px Arial";
-    context.fillText("Orden", 115, 230);
+    logo.onload = () => {
+      context.drawImage(logo, 115, 115, 82, 82);
+
+      context.fillStyle = "#0f766e";
+      context.font = "bold 26px Arial";
+      context.fillText("FÉLIX CANCELADO", 220, 145);
+
+      context.fillStyle = "#0f172a";
+      context.font = "bold 72px Arial";
+      context.fillText("Orden", 220, 230);
+
+      const link = document.createElement("a");
+      link.download = `orden-${order.number}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
+
+    logo.onerror = () => {
+      context.fillStyle = "#0f766e";
+      context.font = "bold 26px Arial";
+      context.fillText("FÉLIX CANCELADO", 115, 145);
+
+      context.fillStyle = "#0f172a";
+      context.font = "bold 72px Arial";
+      context.fillText("Orden", 115, 230);
+
+      const link = document.createElement("a");
+      link.download = `orden-${order.number}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
 
     context.font = "bold 34px Arial";
     context.fillText(`Orden #${order.number}`, 730, 150);
@@ -874,15 +909,7 @@ export function PanelPage() {
       context.fillText(line, 150, 950 + index * 36);
     });
 
-    context.fillStyle = "#64748b";
-    context.font = "20px Arial";
-    context.fillText("Esta orden no constituye factura legal ni comprobante fiscal.", 115, 1165);
-    context.fillText("El documento legal correspondiente se adjunta cuando aplica.", 115, 1198);
 
-    const link = document.createElement("a");
-    link.download = `orden-${order.number}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
   }
 
   function prepareEmailOrder(order: Order, mode: "send" | "resend") {
@@ -1656,6 +1683,7 @@ export function PanelPage() {
     </div>
   );
 }
+
 
 
 
