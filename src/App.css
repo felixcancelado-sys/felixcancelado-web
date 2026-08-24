@@ -1859,3 +1859,16 @@
 .panel-small-action:hover {
   transform: translateY(-1px) !important;
 }
+
+/* PANEL ORDER DOWNLOAD ACTIONS */
+
+.panel-order-actions-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-top: 12px !important;
+}
+
+.panel-order-actions-row .panel-small-action {
+  margin-top: 0 !important;
+}

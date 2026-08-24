@@ -541,6 +541,360 @@ export function PanelPage() {
     }
   }
 
+
+  function getOrderPaymentDetails(order: Order) {
+    const region = guessPaymentRegion(order.contact?.email?.includes(".co") ? "Colombia" : "");
+    return getPaymentDetailsByRegion(region);
+  }
+
+  function getOrderCustomerName(order: Order) {
+    if (!order.contact) {
+      return "Cliente sin contacto";
+    }
+
+    return `${order.contact.firstName} ${order.contact.lastName || ""}`.trim();
+  }
+
+  function buildOrderHtml(order: Order) {
+    const payment = getOrderPaymentDetails(order);
+    const customer = getOrderCustomerName(order);
+    const issueDate = order.issueDate
+      ? new Date(order.issueDate).toLocaleDateString("es-AR")
+      : "";
+    const dueDate = order.dueDate
+      ? new Date(order.dueDate).toLocaleDateString("es-AR")
+      : "Sin vencimiento";
+
+    return `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Orden #${order.number}</title>
+          <style>
+            body {
+              margin: 0;
+              padding: 32px;
+              background: #f1f5f9;
+              color: #0f172a;
+              font-family: Arial, sans-serif;
+            }
+
+            .order {
+              width: 760px;
+              margin: 0 auto;
+              background: #ffffff;
+              border-radius: 24px;
+              padding: 34px;
+              box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+            }
+
+            .top {
+              display: flex;
+              justify-content: space-between;
+              gap: 24px;
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 22px;
+              margin-bottom: 26px;
+            }
+
+            .brand {
+              font-size: 13px;
+              letter-spacing: 0.18em;
+              text-transform: uppercase;
+              font-weight: 800;
+              color: #0f766e;
+            }
+
+            h1 {
+              margin: 8px 0 0;
+              font-size: 42px;
+            }
+
+            .number {
+              text-align: right;
+              font-size: 18px;
+              font-weight: 800;
+            }
+
+            .grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 18px;
+              margin-bottom: 24px;
+            }
+
+            .box {
+              border: 1px solid #e2e8f0;
+              border-radius: 18px;
+              padding: 16px;
+              background: #f8fafc;
+            }
+
+            .box span {
+              display: block;
+              font-size: 12px;
+              color: #64748b;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              margin-bottom: 7px;
+            }
+
+            .box strong {
+              display: block;
+              font-size: 17px;
+            }
+
+            .detail {
+              margin: 24px 0;
+              border: 1px solid #e2e8f0;
+              border-radius: 18px;
+              overflow: hidden;
+            }
+
+            .row {
+              display: grid;
+              grid-template-columns: 1.6fr 1fr;
+              gap: 16px;
+              padding: 16px;
+              border-bottom: 1px solid #e2e8f0;
+            }
+
+            .row:last-child {
+              border-bottom: 0;
+            }
+
+            .total {
+              text-align: right;
+              margin-top: 24px;
+              font-size: 32px;
+              font-weight: 900;
+              color: #0f766e;
+            }
+
+            .payment {
+              margin-top: 28px;
+              border-radius: 18px;
+              padding: 18px;
+              background: #ecfeff;
+              border: 1px solid #67e8f9;
+            }
+
+            .payment strong {
+              display: block;
+              margin-bottom: 8px;
+            }
+
+            .payment small {
+              display: block;
+              font-size: 14px;
+              margin-top: 4px;
+            }
+
+            .note {
+              margin-top: 22px;
+              font-size: 12px;
+              color: #64748b;
+              line-height: 1.5;
+            }
+
+            @media print {
+              body {
+                background: white;
+                padding: 0;
+              }
+
+              .order {
+                box-shadow: none;
+                width: auto;
+                border-radius: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <section class="order">
+            <div class="top">
+              <div>
+                <div class="brand">Félix Cancelado</div>
+                <h1>Orden</h1>
+              </div>
+              <div class="number">
+                Orden #${order.number}<br />
+                <span>${formatOrderStatus(order.status)}</span>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="box">
+                <span>Cliente</span>
+                <strong>${customer}</strong>
+                <p>${order.contact?.email || "Sin email"}</p>
+              </div>
+
+              <div class="box">
+                <span>Fechas</span>
+                <strong>Emisión: ${issueDate}</strong>
+                <p>Vencimiento: ${dueDate}</p>
+              </div>
+            </div>
+
+            <div class="detail">
+              <div class="row">
+                <strong>Descripción</strong>
+                <strong>Total</strong>
+              </div>
+              <div class="row">
+                <div>
+                  <strong>${order.description}</strong>
+                  <p>${order.detail || ""}</p>
+                </div>
+                <strong>${formatMoney(Number(order.total))}</strong>
+              </div>
+            </div>
+
+            <div class="total">
+              Total: ${formatMoney(Number(order.total))}
+            </div>
+
+            <div class="payment">
+              <strong>${payment.label}</strong>
+              ${payment.lines.map((line: string) => `<small>${line}</small>`).join("")}
+            </div>
+
+            <p class="note">
+              Esta orden no constituye factura legal ni comprobante fiscal.
+              El documento legal correspondiente se adjunta cuando aplica.
+            </p>
+          </section>
+        </body>
+      </html>
+    `;
+  }
+
+  function downloadOrderPdf(order: Order) {
+    const printWindow = window.open("", "_blank", "width=900,height=1100");
+
+    if (!printWindow) {
+      setMessage("El navegador bloqueó la ventana para descargar PDF.");
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(buildOrderHtml(order));
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
+  }
+
+  function downloadOrderImage(order: Order) {
+    const customer = getOrderCustomerName(order);
+    const payment = getOrderPaymentDetails(order);
+    const canvas = document.createElement("canvas");
+    const width = 1080;
+    const height = 1350;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      setMessage("No se pudo generar la imagen.");
+      return;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    context.fillStyle = "#f8fafc";
+    context.fillRect(0, 0, width, height);
+
+    context.fillStyle = "#ffffff";
+    context.roundRect(70, 70, 940, 1210, 32);
+    context.fill();
+
+    context.fillStyle = "#0f766e";
+    context.font = "bold 26px Arial";
+    context.fillText("FÉLIX CANCELADO", 115, 145);
+
+    context.fillStyle = "#0f172a";
+    context.font = "bold 72px Arial";
+    context.fillText("Orden", 115, 230);
+
+    context.font = "bold 34px Arial";
+    context.fillText(`Orden #${order.number}`, 730, 150);
+
+    context.font = "24px Arial";
+    context.fillText(formatOrderStatus(order.status), 730, 190);
+
+    context.strokeStyle = "#e2e8f0";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(115, 285);
+    context.lineTo(965, 285);
+    context.stroke();
+
+    context.fillStyle = "#64748b";
+    context.font = "bold 22px Arial";
+    context.fillText("CLIENTE", 115, 355);
+
+    context.fillStyle = "#0f172a";
+    context.font = "bold 34px Arial";
+    context.fillText(customer, 115, 400);
+
+    context.font = "24px Arial";
+    context.fillText(order.contact?.email || "Sin email", 115, 438);
+
+    context.fillStyle = "#64748b";
+    context.font = "bold 22px Arial";
+    context.fillText("DESCRIPCIÓN", 115, 535);
+
+    context.fillStyle = "#0f172a";
+    context.font = "bold 34px Arial";
+    context.fillText(order.description, 115, 585);
+
+    context.font = "24px Arial";
+    context.fillText(order.detail || "", 115, 625);
+
+    context.fillStyle = "#0f766e";
+    context.font = "bold 62px Arial";
+    context.fillText(`Total: ${formatMoney(Number(order.total))}`, 115, 755);
+
+    context.fillStyle = "#ecfeff";
+    context.roundRect(115, 835, 850, 230, 26);
+    context.fill();
+
+    context.fillStyle = "#0f172a";
+    context.font = "bold 30px Arial";
+    context.fillText(payment.label, 150, 900);
+
+    context.font = "24px Arial";
+    payment.lines.forEach((line: string, index: number) => {
+      context.fillText(line, 150, 950 + index * 36);
+    });
+
+    context.fillStyle = "#64748b";
+    context.font = "20px Arial";
+    context.fillText("Esta orden no constituye factura legal ni comprobante fiscal.", 115, 1165);
+    context.fillText("El documento legal correspondiente se adjunta cuando aplica.", 115, 1198);
+
+    const link = document.createElement("a");
+    link.download = `orden-${order.number}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }
+
+  function prepareEmailOrder(order: Order, mode: "send" | "resend") {
+    const hasAttachment = Boolean(order.document?.fileName);
+    const action = mode === "send" ? "Envío" : "Reenvío";
+    setMessage(
+      `${action} preparado para la orden #${order.number} ${
+        hasAttachment ? "con adjunto." : "sin adjunto."
+      } Falta conectar el envío real por email.`
+    );
+  }
+
   function handleLogout() {
     localStorage.removeItem("orders_panel_token");
     setToken("");
@@ -1217,6 +1571,32 @@ export function PanelPage() {
                                 ? `Vence: ${new Date(order.dueDate).toLocaleDateString("es-AR")}`
                                 : "Sin vencimiento"}
                             </span>
+
+                            <div className="panel-order-actions-row">
+                              <button
+                                type="button"
+                                className="panel-small-action"
+                                onClick={() => downloadOrderPdf(order)}
+                              >
+                                Descargar PDF
+                              </button>
+
+                              <button
+                                type="button"
+                                className="panel-small-action"
+                                onClick={() => downloadOrderImage(order)}
+                              >
+                                Descargar imagen
+                              </button>
+
+                              <button
+                                type="button"
+                                className="panel-small-action"
+                                onClick={() => prepareEmailOrder(order, "send")}
+                              >
+                                Enviar email
+                              </button>
+                            </div>
                           </div>
                         </article>
                       ))
@@ -1257,11 +1637,7 @@ export function PanelPage() {
                           <button
                             type="button"
                             className="panel-small-action"
-                            onClick={() =>
-                              setMessage(
-                                `Reenvío preparado para la orden #${order.number}. Falta conectar el envío real por email.`
-                              )
-                            }
+                            onClick={() => prepareEmailOrder(order, "resend")}
                           >
                             Reenviar orden
                           </button>
@@ -1280,6 +1656,7 @@ export function PanelPage() {
     </div>
   );
 }
+
 
 
 
