@@ -297,14 +297,6 @@ export function PanelPage() {
       .slice(0, 40);
   }, [contacts, orderContactSearch]);
 
-  const selectedOrderContact = useMemo(() => {
-    return contacts.find((contact) => contact.id === orderForm.contactId) || null;
-  }, [contacts, orderForm.contactId]);
-
-  const selectedPaymentDetails = useMemo(() => {
-    return getPaymentDetails(selectedOrderContact);
-  }, [selectedOrderContact]);
-
   async function apiFetch(path: string, options: RequestInit = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
