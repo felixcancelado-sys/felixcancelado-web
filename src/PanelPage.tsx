@@ -87,7 +87,6 @@ function formatOrderStatus(status: string) {
 
   return labels[status] || status;
 }
-
 function getPaymentDetailsByRegion(region: PaymentRegion) {
   if (region === "argentina") {
     return {
@@ -132,46 +131,13 @@ function guessPaymentRegion(country?: string | null): PaymentRegion {
   return "world";
 }
 
-type PaymentDetails = {
-  label: string;
-  lines: string[];
-};
 
-function normalizeCountry(value?: string | null) {
-  return (value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
 
-function getPaymentDetails(contact?: Contact | null): PaymentDetails {
-  const country = normalizeCountry(contact?.country);
 
-  if (country.includes("argentina")) {
-    return {
-      label: "Argentina · BBVA",
-      lines: [
-        "Alias: PROFE.FELIX.CANCELAD",
-        "CBU: 0170006040000005422924",
-        "Cuenta: 6-54229/2",
-        "Tipo: Caja de Ahorros",
-      ],
-    };
-  }
 
-  if (country.includes("colombia")) {
-    return {
-      label: "Colombia · Llave Nu",
-      lines: ["Llave Nu: @FCJ615"],
-    };
-  }
 
-  return {
-    label: "Resto del mundo · PayPal",
-    lines: ["PayPal: felixcancelado@gmail.com"],
-  };
-}
+
+
 
 export function PanelPage() {
   const [email, setEmail] = useState("felixcancelado@gmail.com");
@@ -238,9 +204,6 @@ export function PanelPage() {
 
   const estimatedTotal = Math.max(estimatedSubtotal - estimatedDiscount, 0);
 
-  const selectedOrderContact = useMemo(() => {
-    return contacts.find((contact) => contact.id === orderForm.contactId) || null;
-  }, [contacts, orderForm.contactId]);
 
   const selectedPaymentDetails = useMemo(() => {
     return getPaymentDetailsByRegion(paymentRegion);
@@ -1034,7 +997,7 @@ export function PanelPage() {
                       <div className="panel-payment-lines">
                         <span>Datos de pago</span>
                         <strong>{selectedPaymentDetails.label}</strong>
-                        {selectedPaymentDetails.lines.map((line) => (
+                        {selectedPaymentDetails.lines.map((line: string) => (
                           <small key={line}>{line}</small>
                         ))}
                       </div>
@@ -1303,3 +1266,5 @@ export function PanelPage() {
     </div>
   );
 }
+
+
