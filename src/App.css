@@ -2270,3 +2270,178 @@
     margin-top: 11px;
   }
 }
+/* =========================================================
+   CARDS MOBILE BALANCE + CONTACT CHANNELS V1
+   ========================================================= */
+
+/*
+   Móvil:
+   - títulos reservan la misma altura
+   - descripciones se muestran completas
+   - ambas reservan la misma zona vertical
+   - CTA queda alineado abajo
+*/
+@media (max-width: 640px) {
+  .app-card-body {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-card h3 {
+    min-height: 2.16em;
+  }
+
+  .app-description {
+    min-height: 8.3em;
+    margin-top: 8px;
+
+    display: block;
+    overflow: visible;
+
+    font-size: 0.68rem;
+    line-height: 1.38;
+
+    -webkit-box-orient: initial;
+    -webkit-line-clamp: unset;
+  }
+
+  .app-card-action {
+    margin-top: auto;
+  }
+}
+
+/* CONTACTO: EMAIL + WHATSAPP */
+
+.contact-actions {
+  width: min(100%, 390px);
+  flex: 0 0 auto;
+  display: grid;
+  gap: 11px;
+}
+
+.contact-actions .contact-button {
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: space-between;
+}
+
+.contact-button-whatsapp {
+  border-color: rgba(80, 243, 178, 0.42);
+  background: rgba(80, 243, 178, 0.07);
+}
+
+.contact-button-whatsapp:hover {
+  background: rgba(80, 243, 178, 0.13);
+}
+
+/* REDES SOCIALES */
+
+.social-section {
+  margin: 22px 0 80px;
+  padding: 34px;
+  border: 1px solid rgba(91, 241, 182, 0.18);
+  border-radius: 26px;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(68, 238, 172, 0.09),
+      transparent 32%
+    ),
+    rgba(255, 255, 255, 0.025);
+}
+
+.social-heading h2 {
+  margin: 7px 0 0;
+  color: #f3fff9;
+  font-size: clamp(1.55rem, 3vw, 2.25rem);
+}
+
+.social-links {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.social-link {
+  min-width: 0;
+  padding: 16px 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  border: 1px solid rgba(104, 255, 195, 0.2);
+  border-radius: 16px;
+
+  color: #d8ffef;
+  background: rgba(255, 255, 255, 0.035);
+
+  text-decoration: none;
+
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease;
+}
+
+.social-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(104, 255, 195, 0.48);
+  background: rgba(104, 255, 195, 0.08);
+}
+
+.social-link > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.social-link strong {
+  color: #f3fff9;
+  font-size: 1rem;
+}
+
+.social-link small {
+  color: #8fa9a0;
+  font-size: 0.8rem;
+}
+
+.social-link > span:last-child {
+  color: #67f1b8;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+@media (max-width: 820px) {
+  .contact-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .social-section {
+    margin-top: 16px;
+    margin-bottom: 54px;
+    padding: 24px 18px;
+    border-radius: 21px;
+  }
+
+  .social-links {
+    margin-top: 18px;
+    grid-template-columns: 1fr;
+  }
+
+  .social-link {
+    padding: 14px 15px;
+  }
+
+  .contact-button {
+    box-sizing: border-box;
+  }
+
+  .contact-button-whatsapp {
+    font-size: 0.76rem;
+  }
+}

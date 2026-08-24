@@ -19,7 +19,7 @@ const learningApps: LearningApp[] = [
     name: "CodeSpeak English",
     category: "English for IT",
     description:
-      "Inglés práctico para profesionales de tecnología. Entrena verbos, expresiones, vocabulario, trivia y comunicación aplicada al trabajo.",
+      "Inglés práctico para profesionales de tecnología. Entrena vocabulario, expresiones y comunicación aplicada a situaciones reales de trabajo.",
     tags: ["IT English", "Práctica", "Gamificación", "Coach IT"],
     url: "https://app.codespeak.tizapp.fun/",
     status: "Disponible",
@@ -30,7 +30,7 @@ const learningApps: LearningApp[] = [
     name: "Gran Caldas",
     category: "Educación solidaria",
     description:
-      "Plataforma educativa para mantener activo el proceso de enseñanza-aprendizaje en primaria durante contingencias o reconstrucción.",
+      "Educación primaria para situaciones de contingencia. Ofrece actividades, acompañamiento y continuidad del aprendizaje durante la reconstrucción.",
     tags: ["Primaria", "Escuela Nueva", "PWA", "Solidaria"],
     url: "https://grancaldasescuelanueva.tizapp.fun/",
     status: "Disponible",
@@ -259,13 +259,61 @@ function App() {
                 <h2>Construyamos nuevas formas de aprender.</h2>
               </div>
 
-              <a
-                className="contact-button"
-                href="mailto:felixcancelado@gmail.com"
-              >
-                <span>felixcancelado@gmail.com</span>
-                <span aria-hidden="true">→</span>
-              </a>
+              <div className="contact-actions">
+                <a
+                  className="contact-button"
+                  href="mailto:felixcancelado@gmail.com"
+                >
+                  <span>felixcancelado@gmail.com</span>
+                  <span aria-hidden="true">→</span>
+                </a>
+
+                <a
+                  className="contact-button contact-button-whatsapp"
+                  href="https://wa.me/5491150514466"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Contactar a Félix Cancelado por WhatsApp"
+                >
+                  <span>WhatsApp · +54 9 11 5051-4466</span>
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
+            </section>
+
+            <section className="social-section">
+              <div className="social-heading">
+                <p className="section-kicker">Redes sociales</p>
+                <h2>También puedes encontrarme aquí.</h2>
+              </div>
+
+              <div className="social-links">
+                <a
+                  className="social-link"
+                  href="https://www.youtube.com/@felixcancelado"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>
+                    <strong>YouTube</strong>
+                    <small>@felixcancelado</small>
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </a>
+
+                <a
+                  className="social-link"
+                  href="https://www.instagram.com/felix.cancelado/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>
+                    <strong>Instagram</strong>
+                    <small>@felix.cancelado</small>
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
             </section>
           </section>
         </main>
