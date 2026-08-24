@@ -47,6 +47,8 @@ type Order = {
 type PanelSection = "dashboard" | "contacts" | "orders" | "pending";
 type ContactView = "create" | "list";
 type OrderView = "create" | "list";
+type BillingMode = "hours" | "service";
+type PaymentRegion = "argentina" | "colombia" | "world";
 
 const API_BASE_URL = import.meta.env.VITE_ORDERS_API_URL || "";
 
@@ -84,6 +86,50 @@ function formatOrderStatus(status: string) {
   };
 
   return labels[status] || status;
+}
+
+function getPaymentDetailsByRegion(region: PaymentRegion) {
+  if (region === "argentina") {
+    return {
+      label: "Argentina · BBVA",
+      lines: [
+        "Alias: PROFE.FELIX.CANCELAD",
+        "CBU: 0170006040000005422924",
+        "Cuenta: 6-54229/2",
+        "Tipo: Caja de Ahorros",
+      ],
+    };
+  }
+
+  if (region === "colombia") {
+    return {
+      label: "Colombia · Llave Nu",
+      lines: ["Llave Nu: @FCJ615"],
+    };
+  }
+
+  return {
+    label: "Resto del mundo · PayPal",
+    lines: ["PayPal: felixcancelado@gmail.com"],
+  };
+}
+
+function guessPaymentRegion(country?: string | null): PaymentRegion {
+  const normalizedCountry = (country || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+  if (normalizedCountry.includes("argentina")) {
+    return "argentina";
+  }
+
+  if (normalizedCountry.includes("colombia")) {
+    return "colombia";
+  }
+
+  return "world";
 }
 
 type PaymentDetails = {
@@ -160,11 +206,16 @@ export function PanelPage() {
     detail: "",
     hours: "",
     rate: "",
+    serviceTotal: "",
     discount: "0",
     internalNotes: "",
   });
 
   const [orderDocument, setOrderDocument] = useState<File | null>(null);
+  const [billingMode, setBillingMode] = useState<BillingMode>("hours");
+  const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>("argentina");
+  const [contactSearch, setContactSearch] = useState("");
+  const [orderContactSearch, setOrderContactSearch] = useState("");
 
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -172,16 +223,79 @@ export function PanelPage() {
   const isConfigured = useMemo(() => API_BASE_URL.length > 0, []);
 
   const estimatedSubtotal = useMemo(() => {
+    if (billingMode === "service") {
+      return optionalNumber(orderForm.serviceTotal) || 0;
+    }
+
     const hours = optionalNumber(orderForm.hours) || 0;
     const rate = optionalNumber(orderForm.rate) || 0;
     return hours * rate;
-  }, [orderForm.hours, orderForm.rate]);
+  }, [billingMode, orderForm.hours, orderForm.rate, orderForm.serviceTotal]);
 
   const estimatedDiscount = useMemo(() => {
     return optionalNumber(orderForm.discount) || 0;
   }, [orderForm.discount]);
 
   const estimatedTotal = Math.max(estimatedSubtotal - estimatedDiscount, 0);
+
+  const selectedOrderContact = useMemo(() => {
+    return contacts.find((contact) => contact.id === orderForm.contactId) || null;
+  }, [contacts, orderForm.contactId]);
+
+  const selectedPaymentDetails = useMemo(() => {
+    return getPaymentDetailsByRegion(paymentRegion);
+  }, [paymentRegion]);
+
+  const filteredContacts = useMemo(() => {
+    const query = contactSearch.toLowerCase().trim();
+
+    if (!query) {
+      return contacts;
+    }
+
+    return contacts.filter((contact) => {
+      const text = [
+        contact.firstName,
+        contact.lastName,
+        contact.email,
+        contact.phone,
+        contact.company,
+        contact.city,
+        contact.country,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return text.includes(query);
+    });
+  }, [contacts, contactSearch]);
+
+  const filteredOrderContacts = useMemo(() => {
+    const query = orderContactSearch.toLowerCase().trim();
+
+    if (!query) {
+      return contacts.slice(0, 40);
+    }
+
+    return contacts
+      .filter((contact) => {
+        const text = [
+          contact.firstName,
+          contact.lastName,
+          contact.email,
+          contact.company,
+          contact.city,
+          contact.country,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return text.includes(query);
+      })
+      .slice(0, 40);
+  }, [contacts, orderContactSearch]);
 
   const selectedOrderContact = useMemo(() => {
     return contacts.find((contact) => contact.id === orderForm.contactId) || null;
@@ -416,13 +530,20 @@ export function PanelPage() {
           currency: "ARS",
           description: orderForm.description.trim(),
           detail: orderForm.detail.trim() || undefined,
-          hours: optionalNumber(orderForm.hours),
-          rate: optionalNumber(orderForm.rate),
-          quantity: optionalNumber(orderForm.hours),
+          hours: billingMode === "hours" ? optionalNumber(orderForm.hours) : undefined,
+          rate: billingMode === "hours" ? optionalNumber(orderForm.rate) : undefined,
+          quantity: billingMode === "hours" ? optionalNumber(orderForm.hours) : 1,
           subtotal: estimatedSubtotal,
           discount: optionalNumber(orderForm.discount) || 0,
           total: estimatedTotal,
-          internalNotes: orderForm.internalNotes.trim() || undefined,
+          internalNotes: [
+            orderForm.internalNotes.trim(),
+            `Tipo de cobro: ${billingMode === "hours" ? "Por horas" : "Servicio cerrado"}`,
+            `Pago: ${selectedPaymentDetails.label}`,
+            ...selectedPaymentDetails.lines,
+          ]
+            .filter(Boolean)
+            .join("\n"),
         }),
       });
 
@@ -444,11 +565,15 @@ export function PanelPage() {
         detail: "",
         hours: "",
         rate: "",
+        serviceTotal: "",
         discount: "0",
         internalNotes: "",
       });
 
       setOrderDocument(null);
+      setBillingMode("hours");
+      setPaymentRegion("argentina");
+      setOrderContactSearch("");
 
       await loadDashboard();
       await loadOrders();
@@ -781,12 +906,21 @@ export function PanelPage() {
 
                 {contactView === "list" ? (
                   <div className="panel-contact-list">
-                    {contacts.length === 0 ? (
+                    <label className="panel-search-field">
+                      Buscar contacto
+                      <input
+                        value={contactSearch}
+                        placeholder="Nombre, email, empresa, ciudad o país"
+                        onChange={(event) => setContactSearch(event.target.value)}
+                      />
+                    </label>
+
+                    {filteredContacts.length === 0 ? (
                       <div className="panel-empty">
                         <p>Aún no hay contactos cargados.</p>
                       </div>
                     ) : (
-                      contacts.map((contact) => (
+                      filteredContacts.map((contact) => (
                         <article key={contact.id} className="panel-contact-item">
                           <div>
                             <strong>
@@ -843,33 +977,75 @@ export function PanelPage() {
 
                 {orderView === "create" ? (
                   <form className="panel-order-form" onSubmit={handleCreateOrder}>
-                    <label className="panel-wide-field">
-                      Contacto *
-                      <select
-                        value={orderForm.contactId}
-                        onChange={(event) =>
-                          setOrderForm((current) => ({
-                            ...current,
-                            contactId: event.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">Seleccionar contacto</option>
-                        {contacts.map((contact) => (
-                          <option key={contact.id} value={contact.id}>
-                            {contact.firstName} {contact.lastName || ""} -{" "}
-                            {contact.email || "sin email"}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className="panel-wide-field panel-contact-picker">
+                      <label>
+                        Buscar contacto *
+                        <input
+                          value={orderContactSearch}
+                          placeholder="Escribe nombre, email, empresa o pais"
+                          onChange={(event) => setOrderContactSearch(event.target.value)}
+                        />
+                      </label>
+
+                      <div className="panel-contact-picker-list">
+                        {filteredOrderContacts.length === 0 ? (
+                          <span>No hay contactos para esa búsqueda.</span>
+                        ) : (
+                          filteredOrderContacts.map((contact) => (
+                            <button
+                              key={contact.id}
+                              type="button"
+                              className={
+                                orderForm.contactId === contact.id
+                                  ? "panel-contact-picker-active"
+                                  : ""
+                              }
+                              onClick={() => {
+                                setOrderForm((current) => ({
+                                  ...current,
+                                  contactId: contact.id,
+                                }));
+
+                                setOrderContactSearch(
+                                  `${contact.firstName} ${contact.lastName || ""} ${contact.email || ""}`.trim()
+                                );
+
+                                setPaymentRegion(guessPaymentRegion(contact.country));
+                              }}
+                            >
+                              <strong>
+                                {contact.firstName} {contact.lastName || ""}
+                              </strong>
+                              <small>{contact.email || "Sin email"}</small>
+                              <small>{[contact.city, contact.country].filter(Boolean).join(", ")}</small>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
 
                     <div className="panel-payment-card panel-wide-field">
-                      <span>Datos de pago sugeridos</span>
-                      <strong>{selectedPaymentDetails.label}</strong>
-                      {selectedPaymentDetails.lines.map((line) => (
-                        <small key={line}>{line}</small>
-                      ))}
+                      <label>
+                        Destino / medio de pago
+                        <select
+                          value={paymentRegion}
+                          onChange={(event) =>
+                            setPaymentRegion(event.target.value as PaymentRegion)
+                          }
+                        >
+                          <option value="argentina">Argentina · BBVA</option>
+                          <option value="colombia">Colombia · Llave Nu</option>
+                          <option value="world">Resto del mundo · PayPal</option>
+                        </select>
+                      </label>
+
+                      <div className="panel-payment-lines">
+                        <span>Datos de pago</span>
+                        <strong>{selectedPaymentDetails.label}</strong>
+                        {selectedPaymentDetails.lines.map((line) => (
+                          <small key={line}>{line}</small>
+                        ))}
+                      </div>
                     </div>
 
                     <label>
@@ -904,6 +1080,19 @@ export function PanelPage() {
                     </label>
 
                     <label className="panel-wide-field">
+                      Tipo de cobro
+                      <select
+                        value={billingMode}
+                        onChange={(event) =>
+                          setBillingMode(event.target.value as BillingMode)
+                        }
+                      >
+                        <option value="hours">Por horas</option>
+                        <option value="service">Servicio cerrado</option>
+                      </select>
+                    </label>
+
+                    <label className="panel-wide-field">
                       Descripción *
                       <input
                         value={orderForm.description}
@@ -931,35 +1120,54 @@ export function PanelPage() {
                       />
                     </label>
 
-                    <label>
-                      Horas
-                      <input
-                        inputMode="decimal"
-                        value={orderForm.hours}
-                        placeholder="4"
-                        onChange={(event) =>
-                          setOrderForm((current) => ({
-                            ...current,
-                            hours: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
+                    {billingMode === "hours" ? (
+                      <>
+                        <label>
+                          Horas
+                          <input
+                            inputMode="decimal"
+                            value={orderForm.hours}
+                            placeholder="4"
+                            onChange={(event) =>
+                              setOrderForm((current) => ({
+                                ...current,
+                                hours: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
 
-                    <label>
-                      Valor hora
-                      <input
-                        inputMode="decimal"
-                        value={orderForm.rate}
-                        placeholder="22950"
-                        onChange={(event) =>
-                          setOrderForm((current) => ({
-                            ...current,
-                            rate: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
+                        <label>
+                          Valor hora
+                          <input
+                            inputMode="decimal"
+                            value={orderForm.rate}
+                            placeholder="22950"
+                            onChange={(event) =>
+                              setOrderForm((current) => ({
+                                ...current,
+                                rate: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+                      </>
+                    ) : (
+                      <label className="panel-wide-field">
+                        Valor del servicio
+                        <input
+                          inputMode="decimal"
+                          value={orderForm.serviceTotal}
+                          placeholder="91800"
+                          onChange={(event) =>
+                            setOrderForm((current) => ({
+                              ...current,
+                              serviceTotal: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                    )}
 
                     <label>
                       Descuento

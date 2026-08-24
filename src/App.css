@@ -1717,3 +1717,128 @@
   font-weight: 900 !important;
   cursor: pointer !important;
 }
+
+/* PANEL CONTACT SEARCH AND ORDER UX V2 */
+
+.panel-search-field {
+  display: grid !important;
+  gap: 8px !important;
+  margin-bottom: 14px !important;
+  color: rgba(248, 250, 252, 0.82) !important;
+  font-weight: 800 !important;
+}
+
+.panel-search-field input,
+.panel-contact-picker input,
+.panel-payment-card select {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 16px !important;
+  padding: 12px 14px !important;
+  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+  outline: none !important;
+}
+
+.panel-contact-picker {
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.panel-contact-picker label {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.panel-contact-picker-list {
+  display: grid !important;
+  gap: 8px !important;
+  max-height: 260px !important;
+  overflow: auto !important;
+  padding: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.panel-contact-picker-list > span {
+  color: rgba(248, 250, 252, 0.68) !important;
+  padding: 8px !important;
+}
+
+.panel-contact-picker-list button {
+  display: grid !important;
+  gap: 4px !important;
+  text-align: left !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  padding: 11px 13px !important;
+  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  cursor: pointer !important;
+}
+
+.panel-contact-picker-list button:hover,
+.panel-contact-picker-active {
+  border-color: rgba(103, 232, 249, 0.55) !important;
+  background: rgba(103, 232, 249, 0.12) !important;
+}
+
+.panel-contact-picker-list small {
+  color: rgba(248, 250, 252, 0.68) !important;
+}
+
+.panel-payment-card {
+  display: grid !important;
+  gap: 14px !important;
+  padding: 16px !important;
+  border: 1px solid rgba(103, 232, 249, 0.24) !important;
+  border-radius: 20px !important;
+  background: rgba(103, 232, 249, 0.08) !important;
+}
+
+.panel-payment-card label {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.panel-payment-card select option {
+  color: #0f172a !important;
+}
+
+.panel-payment-lines {
+  display: grid !important;
+  gap: 5px !important;
+}
+
+.panel-payment-lines span {
+  color: rgba(248, 250, 252, 0.68) !important;
+  font-weight: 800 !important;
+}
+
+.panel-payment-lines strong {
+  color: #f8fafc !important;
+  font-size: 1.05rem !important;
+}
+
+.panel-payment-lines small {
+  color: rgba(248, 250, 252, 0.82) !important;
+  font-size: 0.92rem !important;
+}
+
+.panel-order-form input[type="file"] {
+  padding: 10px !important;
+  cursor: pointer !important;
+}
+
+.panel-order-form input[type="file"]::file-selector-button {
+  border: 0 !important;
+  border-radius: 999px !important;
+  padding: 9px 13px !important;
+  margin-right: 12px !important;
+  color: #042f2e !important;
+  background: linear-gradient(135deg, #67e8f9, #34d399) !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
