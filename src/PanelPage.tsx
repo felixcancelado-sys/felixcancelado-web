@@ -885,7 +885,7 @@ export function PanelPage() {
   }
   async function markOrderAsPaid(order: Order) {
     const confirmed = window.confirm(
-      `¿Marcar la orden #${order.number} como pagada?`
+      `¿Marcar la orden #${order.number} como pagada y enviar confirmación al cliente?`
     );
 
     if (!confirmed) {
@@ -902,23 +902,81 @@ export function PanelPage() {
           status: "PAID",
         }),
       });
-
-      await Promise.all([
-        loadPendingOrders(),
-        loadOrders(),
-        loadDashboard(),
-      ]);
-
-      setMessage(`Orden #${order.number} marcada como pagada.`);
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
           : "No se pudo marcar la orden como pagada."
       );
-    } finally {
       setIsLoading(false);
+      return;
     }
+
+    let paymentEmailTo: string | null = null;
+    let paymentEmailError: string | null = null;
+
+    if (!order.contact?.email) {
+      paymentEmailError = "El contacto no tiene email.";
+    } else {
+      try {
+        const response = await apiFetch(
+          `/api/panel/orders/${order.id}/payment-received`,
+          {
+            method: "POST",
+          }
+        );
+
+        const data = (await response.json()) as {
+          ok: boolean;
+          emailTo: string;
+        };
+
+        paymentEmailTo = data.emailTo;
+      } catch (error) {
+        paymentEmailError =
+          error instanceof Error
+            ? error.message
+            : "No se pudo enviar la confirmación de pago.";
+      }
+    }
+
+    try {
+      await Promise.all([
+        loadPendingOrders(),
+        loadOrders(),
+        loadDashboard(),
+      ]);
+    } catch {
+      if (paymentEmailError) {
+        setMessage(
+          `Orden #${order.number} marcada como pagada. ` +
+            `No se pudo enviar la confirmación: ${paymentEmailError} ` +
+            `Además, no se pudo actualizar el panel automáticamente.`
+        );
+      } else {
+        setMessage(
+          `Orden #${order.number} marcada como pagada y confirmación enviada a ` +
+            `${paymentEmailTo}. No se pudo actualizar el panel automáticamente.`
+        );
+      }
+
+      setIsLoading(false);
+      return;
+    }
+
+    if (paymentEmailError) {
+      setMessage(
+        `Orden #${order.number} marcada como pagada. ` +
+          `No se pudo enviar la confirmación: ${paymentEmailError}`
+      );
+    } else {
+      setMessage(
+        `Orden #${order.number} marcada como pagada. ` +
+          `Confirmación de pago enviada a ${paymentEmailTo}.`
+      );
+    }
+
+    setIsLoading(false);
   }
   async function prepareEmailOrder(order: Order, mode: "send" | "resend") {
     if (!order.contact?.email) {
