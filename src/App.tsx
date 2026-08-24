@@ -1,5 +1,6 @@
 ﻿import { useEffect, useRef, useState } from "react";
 import "./App.css";
+import { PanelPage } from "./PanelPage";
 
 type LearningApp = {
   id: string;
@@ -76,6 +77,11 @@ function App() {
 
   const isAboutPage = currentHash === "#/sobre-mi";
   const isContactPage = currentHash === "#/contacto";
+  const isPanelPage = currentHash === "#/panel";
+
+  if (isPanelPage) {
+    return <PanelPage />;
+  }
 
   if (isAboutPage) {
     return (
@@ -449,6 +455,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
