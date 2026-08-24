@@ -26,9 +26,12 @@ type Order = {
   id: string;
   number: number;
   description: string;
+  detail?: string | null;
   status: string;
   currency: string;
   total: string | number;
+  subtotal?: string | number;
+  discount?: string | number;
   issueDate: string;
   dueDate?: string | null;
   contact?: {
@@ -40,6 +43,7 @@ type Order = {
 
 type PanelSection = "dashboard" | "contacts" | "orders" | "pending";
 type ContactView = "create" | "list";
+type OrderView = "create" | "list";
 
 const API_BASE_URL = import.meta.env.VITE_ORDERS_API_URL || "";
 
@@ -51,12 +55,42 @@ function formatMoney(value: number) {
   }).format(value || 0);
 }
 
+function optionalNumber(value: string) {
+  if (!value.trim()) {
+    return undefined;
+  }
+
+  const normalizedValue = value.replace(",", ".");
+  const numberValue = Number(normalizedValue);
+
+  if (Number.isNaN(numberValue)) {
+    return undefined;
+  }
+
+  return numberValue;
+}
+
+function formatOrderStatus(status: string) {
+  const labels: Record<string, string> = {
+    DRAFT: "Borrador",
+    SENT: "Enviada",
+    UNPAID: "Sin pagar",
+    PAID: "Pagada",
+    OVERDUE: "Vencida",
+    CANCELLED: "Cancelada",
+  };
+
+  return labels[status] || status;
+}
+
 export function PanelPage() {
   const [email, setEmail] = useState("felixcancelado@gmail.com");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState(() => localStorage.getItem("orders_panel_token") || "");
+
   const [section, setSection] = useState<PanelSection>("dashboard");
   const [contactView, setContactView] = useState<ContactView>("create");
+  const [orderView, setOrderView] = useState<OrderView>("create");
 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -74,10 +108,34 @@ export function PanelPage() {
     notes: "",
   });
 
+  const [orderForm, setOrderForm] = useState({
+    contactId: "",
+    dueDate: "",
+    status: "DRAFT",
+    description: "",
+    detail: "",
+    hours: "",
+    rate: "",
+    discount: "0",
+    internalNotes: "",
+  });
+
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const isConfigured = useMemo(() => API_BASE_URL.length > 0, []);
+
+  const estimatedSubtotal = useMemo(() => {
+    const hours = optionalNumber(orderForm.hours) || 0;
+    const rate = optionalNumber(orderForm.rate) || 0;
+    return hours * rate;
+  }, [orderForm.hours, orderForm.rate]);
+
+  const estimatedDiscount = useMemo(() => {
+    return optionalNumber(orderForm.discount) || 0;
+  }, [orderForm.discount]);
+
+  const estimatedTotal = Math.max(estimatedSubtotal - estimatedDiscount, 0);
 
   async function apiFetch(path: string, options: RequestInit = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -177,6 +235,7 @@ export function PanelPage() {
       }
 
       if (section === "orders") {
+        await loadContacts();
         await loadOrders();
       }
 
@@ -237,6 +296,63 @@ export function PanelPage() {
     }
   }
 
+  async function handleCreateOrder(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      if (!orderForm.contactId) {
+        throw new Error("Selecciona un contacto.");
+      }
+
+      if (!orderForm.description.trim()) {
+        throw new Error("La descripcion es obligatoria.");
+      }
+
+      if (estimatedTotal <= 0) {
+        throw new Error("La orden debe tener un total mayor a cero.");
+      }
+
+      await apiFetch("/api/panel/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          contactId: orderForm.contactId,
+          dueDate: orderForm.dueDate || undefined,
+          status: orderForm.status,
+          currency: "ARS",
+          description: orderForm.description.trim(),
+          detail: orderForm.detail.trim() || undefined,
+          hours: optionalNumber(orderForm.hours),
+          rate: optionalNumber(orderForm.rate),
+          discount: optionalNumber(orderForm.discount) || 0,
+          internalNotes: orderForm.internalNotes.trim() || undefined,
+        }),
+      });
+
+      setOrderForm({
+        contactId: "",
+        dueDate: "",
+        status: "DRAFT",
+        description: "",
+        detail: "",
+        hours: "",
+        rate: "",
+        discount: "0",
+        internalNotes: "",
+      });
+
+      await loadDashboard();
+      await loadOrders();
+      setOrderView("list");
+      setMessage("Orden creada. Revisa el consecutivo en la lista.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Error al crear orden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   function handleLogout() {
     localStorage.removeItem("orders_panel_token");
     setToken("");
@@ -262,13 +378,14 @@ export function PanelPage() {
     }
 
     if (section === "orders") {
+      loadContacts().catch(() => setMessage("No se pudieron cargar los contactos."));
       loadOrders().catch(() => setMessage("No se pudieron cargar las ordenes."));
     }
 
     if (section === "pending") {
       loadPendingOrders().catch(() => setMessage("No se pudieron cargar los pendientes."));
     }
-  }, [section, contactView, token]);
+  }, [section, contactView, orderView, token]);
 
   return (
     <div className="panel-shell">
@@ -592,33 +709,227 @@ export function PanelPage() {
                 <div className="panel-section-title">
                   <div>
                     <h2>Órdenes</h2>
-                    <p>Listado general de órdenes emitidas.</p>
+                    <p>Crear, revisar y preparar órdenes para envío.</p>
                   </div>
 
                   <strong>{orders.length} orden(es)</strong>
                 </div>
 
-                <div className="panel-order-list">
-                  {orders.length === 0 ? (
-                    <div className="panel-empty">
-                      <p>Aún no hay órdenes creadas. La primera orden real será la #682.</p>
-                    </div>
-                  ) : (
-                    orders.map((order) => (
-                      <article key={order.id} className="panel-order-item">
-                        <div>
-                          <strong>Orden #{order.number}</strong>
-                          <span>{order.description}</span>
-                        </div>
+                <div className="panel-subtabs">
+                  <button
+                    type="button"
+                    className={orderView === "create" ? "panel-subtab-active" : ""}
+                    onClick={() => setOrderView("create")}
+                  >
+                    Crear orden
+                  </button>
 
-                        <div>
-                          <strong>{formatMoney(Number(order.total))}</strong>
-                          <span>{order.status}</span>
-                        </div>
-                      </article>
-                    ))
-                  )}
+                  <button
+                    type="button"
+                    className={orderView === "list" ? "panel-subtab-active" : ""}
+                    onClick={() => setOrderView("list")}
+                  >
+                    Listar órdenes
+                  </button>
                 </div>
+
+                {orderView === "create" ? (
+                  <form className="panel-order-form" onSubmit={handleCreateOrder}>
+                    <div className="panel-warning">
+                      <strong>Atención:</strong> al guardar una orden real se usará el próximo
+                      consecutivo disponible. La primera debe ser la #682.
+                    </div>
+
+                    <label className="panel-wide-field">
+                      Contacto *
+                      <select
+                        value={orderForm.contactId}
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            contactId: event.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">Seleccionar contacto</option>
+                        {contacts.map((contact) => (
+                          <option key={contact.id} value={contact.id}>
+                            {contact.firstName} {contact.lastName || ""} -{" "}
+                            {contact.email || "sin email"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      Estado
+                      <select
+                        value={orderForm.status}
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            status: event.target.value,
+                          }))
+                        }
+                      >
+                        <option value="DRAFT">Borrador</option>
+                        <option value="SENT">Enviada</option>
+                        <option value="UNPAID">Sin pagar</option>
+                      </select>
+                    </label>
+
+                    <label>
+                      Vencimiento
+                      <input
+                        type="date"
+                        value={orderForm.dueDate}
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            dueDate: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label className="panel-wide-field">
+                      Descripción *
+                      <input
+                        value={orderForm.description}
+                        placeholder="Ejemplo: Agosto"
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            description: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label className="panel-wide-field">
+                      Detalle
+                      <textarea
+                        value={orderForm.detail}
+                        placeholder="Ejemplo: 4, 11, 18, 25"
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            detail: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Horas
+                      <input
+                        inputMode="decimal"
+                        value={orderForm.hours}
+                        placeholder="4"
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            hours: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Valor hora
+                      <input
+                        inputMode="decimal"
+                        value={orderForm.rate}
+                        placeholder="22950"
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            rate: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      Descuento
+                      <input
+                        inputMode="decimal"
+                        value={orderForm.discount}
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            discount: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label className="panel-wide-field">
+                      Notas internas
+                      <textarea
+                        value={orderForm.internalNotes}
+                        placeholder="Notas privadas. No aparecen en la orden."
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            internalNotes: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <div className="panel-order-total">
+                      <span>Subtotal estimado</span>
+                      <strong>{formatMoney(estimatedSubtotal)}</strong>
+
+                      <span>Descuento</span>
+                      <strong>{formatMoney(estimatedDiscount)}</strong>
+
+                      <span>Total estimado</span>
+                      <strong>{formatMoney(estimatedTotal)}</strong>
+                    </div>
+
+                    <button type="submit" disabled={isLoading}>
+                      {isLoading ? "Guardando..." : "Guardar orden"}
+                    </button>
+                  </form>
+                ) : null}
+
+                {orderView === "list" ? (
+                  <div className="panel-order-list">
+                    {orders.length === 0 ? (
+                      <div className="panel-empty">
+                        <p>Aún no hay órdenes creadas. La primera orden real será la #682.</p>
+                      </div>
+                    ) : (
+                      orders.map((order) => (
+                        <article key={order.id} className="panel-order-item">
+                          <div>
+                            <strong>Orden #{order.number}</strong>
+                            <span>{order.description}</span>
+                            <span>
+                              {order.contact
+                                ? `${order.contact.firstName} ${
+                                    order.contact.lastName || ""
+                                  } - ${order.contact.email || "sin email"}`
+                                : "Sin contacto"}
+                            </span>
+                          </div>
+
+                          <div>
+                            <strong>{formatMoney(Number(order.total))}</strong>
+                            <span>{formatOrderStatus(order.status)}</span>
+                            <span>
+                              {order.dueDate
+                                ? `Vence: ${new Date(order.dueDate).toLocaleDateString("es-AR")}`
+                                : "Sin vencimiento"}
+                            </span>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                ) : null}
               </section>
             ) : null}
 
@@ -648,7 +959,7 @@ export function PanelPage() {
 
                         <div>
                           <strong>{formatMoney(Number(order.total))}</strong>
-                          <span>{order.status}</span>
+                          <span>{formatOrderStatus(order.status)}</span>
                         </div>
                       </article>
                     ))
