@@ -42,6 +42,7 @@ type Order = {
   rate?: string | number | null;
   quantity?: string | number | null;
   internalNotes?: string | null;
+  clientNotes?: string | null;
   contact?: {
     firstName: string;
     lastName?: string | null;
@@ -188,6 +189,7 @@ export function PanelPage() {
     rate: "",
     serviceTotal: "",
     discount: "0",
+    clientNotes: "",
     internalNotes: "",
   });
 
@@ -555,6 +557,7 @@ export function PanelPage() {
           subtotal: estimatedSubtotal,
           discount: optionalNumber(orderForm.discount) || 0,
           total: estimatedTotal,
+          clientNotes: orderForm.clientNotes.trim() || undefined,
           internalNotes: [
             orderForm.internalNotes.trim(),
             `Tipo de cobro: ${billingMode === "hours" ? "Por horas" : "Servicio cerrado"}`,
@@ -586,6 +589,7 @@ export function PanelPage() {
         rate: "",
         serviceTotal: "",
         discount: "0",
+        clientNotes: "",
         internalNotes: "",
       });
 
@@ -1653,6 +1657,20 @@ export function PanelPage() {
                           setOrderForm((current) => ({
                             ...current,
                             discount: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label className="panel-wide-field">
+                      Observaciones para el cliente
+                      <textarea
+                        value={orderForm.clientNotes}
+                        placeholder="Ej.: A partir de septiembre, el valor de la hora se incrementa en $2.000."
+                        onChange={(event) =>
+                          setOrderForm((current) => ({
+                            ...current,
+                            clientNotes: event.target.value,
                           }))
                         }
                       />
