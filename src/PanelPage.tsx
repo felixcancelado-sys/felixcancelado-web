@@ -902,6 +902,59 @@ export function PanelPage() {
       setIsLoading(false);
     }
   }
+  async function handleDeleteOrder(order: Order) {
+    const confirmation = window.prompt(
+      `Para eliminar definitivamente la orden #${order.number}, escribi ${order.number}.`
+    );
+
+    if (confirmation === null) {
+      return;
+    }
+
+    if (confirmation.trim() !== String(order.number)) {
+      setMessage(
+        `No se elimino la orden #${order.number}: el numero ingresado no coincide.`
+      );
+      return;
+    }
+
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      await apiFetch(
+        `/api/panel/orders/${order.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (editingOrderId === order.id) {
+        resetOrderForm();
+      }
+
+      await Promise.all([
+        loadDashboard(),
+        loadOrders(),
+        loadPendingOrders(),
+      ]);
+
+      setOrderView("list");
+
+      setMessage(
+        `Orden #${order.number} eliminada definitivamente.`
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar la orden."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
 
 
 
@@ -2242,6 +2295,18 @@ export function PanelPage() {
                                     }
                                   >
                                     Editar
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="panel-table-action panel-table-action-danger"
+                                    title="Eliminar orden"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      handleDeleteOrder(order)
+                                    }
+                                  >
+                                    Eliminar
                                   </button>
                                 </div>
                               </td>

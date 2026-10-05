@@ -1192,7 +1192,7 @@
 }
 
 .panel-card {
-  width: min(980px, 100%);
+  width: min(1380px, 100%);
   padding: 28px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 28px;
@@ -2806,5 +2806,26 @@
 
   .panel-contact-edit-button {
     justify-self: start;
+  }
+}
+
+
+/* PANEL WIDE + DELETE ORDER V1 */
+
+.panel-table-action-danger {
+  border-color: rgba(248, 113, 113, 0.38) !important;
+  color: #fecaca !important;
+  background: rgba(127, 29, 29, 0.2) !important;
+}
+
+.panel-table-action-danger:hover {
+  border-color: rgba(248, 113, 113, 0.62) !important;
+  color: #ffffff !important;
+  background: rgba(185, 28, 28, 0.35) !important;
+}
+
+@media (max-width: 760px) {
+  .panel-card {
+    width: 100%;
   }
 }
