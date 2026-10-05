@@ -1039,9 +1039,13 @@ export function PanelPage() {
       ? new Date(order.dueDate).toLocaleDateString("es-AR")
       : "Sin vencimiento";
 
+    const hasClientNotes = Boolean(
+      order.clientNotes?.trim()
+    );
+
     const canvas = document.createElement("canvas");
     const width = 1080;
-    const height = 1450;
+    const height = hasClientNotes ? 1900 : 1450;
     const context = canvas.getContext("2d");
 
     if (!context) {
@@ -1058,7 +1062,13 @@ export function PanelPage() {
 
     context.fillStyle = "#ffffff";
     context.beginPath();
-    context.roundRect(70, 70, 940, 1310, 34);
+    context.roundRect(
+      70,
+      70,
+      940,
+      height - 140,
+      34
+    );
     context.fill();
 
     if (logo) {
@@ -1134,7 +1144,74 @@ export function PanelPage() {
     if (order.detail) {
       context.fillStyle = "#334155";
       context.font = "24px Arial";
-      y = formatCanvasText(context, order.detail, 150, y + 22, 760, 34, 5);
+      y = formatCanvasText(
+        context,
+        order.detail,
+        150,
+        y + 22,
+        760,
+        34,
+        5
+      );
+    }
+
+    let summaryY = 900;
+
+    if (hasClientNotes) {
+      const notesY = Math.max(
+        900,
+        y + 40
+      );
+
+      const notesHeight = 210;
+
+      context.fillStyle = "#fff7ed";
+      context.beginPath();
+
+      context.roundRect(
+        115,
+        notesY,
+        850,
+        notesHeight,
+        26
+      );
+
+      context.fill();
+
+      context.strokeStyle = "#fed7aa";
+      context.lineWidth = 2;
+
+      context.strokeRect(
+        115,
+        notesY,
+        850,
+        notesHeight
+      );
+
+      context.fillStyle = "#9a3412";
+      context.font = "bold 22px Arial";
+
+      context.fillText(
+        "OBSERVACIONES PARA EL CLIENTE",
+        150,
+        notesY + 48
+      );
+
+      context.fillStyle = "#334155";
+      context.font = "23px Arial";
+
+      formatCanvasText(
+        context,
+        order.clientNotes || "",
+        150,
+        notesY + 95,
+        760,
+        31,
+        4
+      );
+
+      summaryY =
+        notesY + notesHeight + 30;
     }
 
     const subtotal = Number(order.subtotal || order.total || 0);
@@ -1143,37 +1220,84 @@ export function PanelPage() {
 
     context.fillStyle = "#f8fafc";
     context.beginPath();
-    context.roundRect(115, 900, 850, 180, 26);
+    context.roundRect(
+      115,
+      summaryY,
+      850,
+      180,
+      26
+    );
     context.fill();
 
     context.fillStyle = "#64748b";
     context.font = "bold 22px Arial";
-    context.fillText("RESUMEN", 150, 955);
+    context.fillText(
+      "RESUMEN",
+      150,
+      summaryY + 55
+    );
 
     context.fillStyle = "#0f172a";
     context.font = "24px Arial";
-    context.fillText("Subtotal", 150, 1005);
-    context.fillText(formatMoney(subtotal), 760, 1005);
+    context.fillText(
+      "Subtotal",
+      150,
+      summaryY + 105
+    );
+    context.fillText(
+      formatMoney(subtotal),
+      760,
+      summaryY + 105
+    );
 
-    context.fillText("Descuento", 150, 1045);
-    context.fillText(formatMoney(discount), 760, 1045);
+    context.fillText(
+      "Descuento",
+      150,
+      summaryY + 145
+    );
+    context.fillText(
+      formatMoney(discount),
+      760,
+      summaryY + 145
+    );
 
     context.fillStyle = "#0f766e";
     context.font = "bold 54px Arial";
-    context.fillText(`Total: ${formatMoney(total)}`, 150, 1145);
+    context.fillText(
+      `Total: ${formatMoney(total)}`,
+      150,
+      summaryY + 245
+    );
 
     context.fillStyle = "#ecfeff";
     context.beginPath();
-    context.roundRect(115, 1210, 850, 125, 26);
+    const paymentY =
+      summaryY + 310;
+
+    context.roundRect(
+      115,
+      paymentY,
+      850,
+      125,
+      26
+    );
     context.fill();
 
     context.fillStyle = "#0f172a";
     context.font = "bold 28px Arial";
-    context.fillText(payment.label, 150, 1260);
+    context.fillText(
+      payment.label,
+      150,
+      paymentY + 50
+    );
 
     context.font = "22px Arial";
     payment.lines.forEach((line: string, index: number) => {
-      context.fillText(line, 150, 1300 + index * 30);
+      context.fillText(
+        line,
+        150,
+        paymentY + 90 + index * 30
+      );
     });
 
     return canvas;
