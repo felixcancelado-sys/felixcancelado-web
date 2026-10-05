@@ -26,6 +26,7 @@ type Contact = {
 type Order = {
   id: string;
   number: number;
+  contactId: string;
   description: string;
   detail?: string | null;
   status: string;
@@ -180,6 +181,7 @@ export function PanelPage() {
   });
 
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
 
   const [orderForm, setOrderForm] = useState({
     contactId: "",
@@ -600,6 +602,93 @@ export function PanelPage() {
       setIsLoading(false);
     }
   }
+  function resetOrderForm() {
+    setOrderForm({
+      contactId: "",
+      dueDate: "",
+      status: "DRAFT",
+      description: "",
+      detail: "",
+      hours: "",
+      rate: "",
+      serviceTotal: "",
+      discount: "0",
+      clientNotes: "",
+      internalNotes: "",
+    });
+
+    setOrderDocument(null);
+    setBillingMode("hours");
+    setPaymentRegion("argentina");
+    setOrderContactSearch("");
+    setEditingOrderId(null);
+  }
+
+  function beginEditOrder(order: Order) {
+    const hasHours =
+      Number(order.hours || 0) > 0 &&
+      Number(order.rate || 0) > 0;
+
+    setEditingOrderId(order.id);
+
+    setOrderForm({
+      contactId: order.contactId,
+      dueDate: order.dueDate
+        ? order.dueDate.slice(0, 10)
+        : "",
+      status: order.status,
+      description: order.description || "",
+      detail: order.detail || "",
+      hours: hasHours
+        ? String(order.hours ?? "")
+        : "",
+      rate: hasHours
+        ? String(order.rate ?? "")
+        : "",
+      serviceTotal: hasHours
+        ? ""
+        : String(order.subtotal ?? order.total ?? ""),
+      discount: String(order.discount ?? 0),
+      clientNotes: order.clientNotes || "",
+      internalNotes: order.internalNotes || "",
+    });
+
+    setBillingMode(
+      hasHours ? "hours" : "service"
+    );
+
+    setPaymentRegion(
+      guessPaymentRegion(
+        order.contact?.country || ""
+      )
+    );
+
+    setOrderDocument(null);
+
+    if (order.contact) {
+      setOrderContactSearch(
+        `${order.contact.firstName} ${order.contact.lastName || ""} ${order.contact.email || ""}`.trim()
+      );
+    } else {
+      setOrderContactSearch("");
+    }
+
+    setOrderView("create");
+
+    setMessage(
+      `Editando orden #${order.number}.`
+    );
+
+    setTimeout(() => {
+      document
+        .querySelector(".panel-order-form")
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    }, 0);
+  }
+
 
   async function handleCreateOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -685,6 +774,135 @@ export function PanelPage() {
       setIsLoading(false);
     }
   }
+  async function handleUpdateOrder(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      if (!editingOrderId) {
+        throw new Error(
+          "No se pudo identificar la orden."
+        );
+      }
+
+      if (!orderForm.contactId) {
+        throw new Error(
+          "Selecciona un contacto."
+        );
+      }
+
+      if (!orderForm.description.trim()) {
+        throw new Error(
+          "La descripcion es obligatoria."
+        );
+      }
+
+      if (estimatedTotal <= 0) {
+        throw new Error(
+          "La orden debe tener un total mayor a cero."
+        );
+      }
+
+      const currentOrder =
+        orders.find(
+          (order) =>
+            order.id === editingOrderId
+        );
+
+      await apiFetch(
+        `/api/panel/orders/${editingOrderId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            contactId: orderForm.contactId,
+            dueDate:
+              orderForm.dueDate || null,
+            status: orderForm.status,
+            currency: "ARS",
+            description:
+              orderForm.description.trim(),
+            detail:
+              orderForm.detail.trim() || null,
+
+            hours:
+              billingMode === "hours"
+                ? optionalNumber(
+                    orderForm.hours
+                  ) ?? null
+                : null,
+
+            rate:
+              billingMode === "hours"
+                ? optionalNumber(
+                    orderForm.rate
+                  ) ?? null
+                : null,
+
+            quantity:
+              billingMode === "hours"
+                ? optionalNumber(
+                    orderForm.hours
+                  ) ?? null
+                : 1,
+
+            subtotal: estimatedSubtotal,
+
+            discount:
+              optionalNumber(
+                orderForm.discount
+              ) || 0,
+
+            total: estimatedTotal,
+
+            clientNotes:
+              orderForm.clientNotes.trim() ||
+              null,
+
+            internalNotes:
+              orderForm.internalNotes.trim() ||
+              null,
+          }),
+        }
+      );
+
+      if (orderDocument) {
+        await uploadOrderDocument(
+          editingOrderId,
+          orderDocument
+        );
+      }
+
+      await Promise.all([
+        loadDashboard(),
+        loadOrders(),
+        loadPendingOrders(),
+      ]);
+
+      const orderNumber =
+        currentOrder?.number;
+
+      resetOrderForm();
+      setOrderView("list");
+
+      setMessage(
+        orderNumber
+          ? `Orden #${orderNumber} actualizada correctamente.`
+          : "Orden actualizada correctamente."
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Error al actualizar la orden."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
 
 
 
@@ -1545,22 +1763,39 @@ export function PanelPage() {
                   <button
                     type="button"
                     className={orderView === "create" ? "panel-subtab-active" : ""}
-                    onClick={() => setOrderView("create")}
+                    onClick={() => {
+                      resetOrderForm();
+                      setOrderView("create");
+                    }}
                   >
-                    Crear orden
+                    {editingOrderId
+                        ? `Editar orden #${orders.find(
+                            (order) => order.id === editingOrderId
+                          )?.number || ""}`
+                        : "Crear orden"}
                   </button>
 
                   <button
                     type="button"
                     className={orderView === "list" ? "panel-subtab-active" : ""}
-                    onClick={() => setOrderView("list")}
+                    onClick={() => {
+                      setEditingOrderId(null);
+                      setOrderView("list");
+                    }}
                   >
                     Listar órdenes
                   </button>
                 </div>
 
                 {orderView === "create" ? (
-                  <form className="panel-order-form" onSubmit={handleCreateOrder}>
+                  <form
+                    className="panel-order-form"
+                    onSubmit={
+                      editingOrderId
+                        ? handleUpdateOrder
+                        : handleCreateOrder
+                    }
+                  >
                     <div className="panel-wide-field panel-contact-picker">
                       <label>
                         Buscar contacto *
@@ -1648,6 +1883,19 @@ export function PanelPage() {
                         <option value="DRAFT">Borrador</option>
                         <option value="SENT">Enviada</option>
                         <option value="UNPAID">Sin pagar</option>
+                        {editingOrderId ? (
+                          <>
+                            <option value="PAID">
+                              Pagada
+                            </option>
+                            <option value="OVERDUE">
+                              Vencida
+                            </option>
+                            <option value="CANCELLED">
+                              Cancelada
+                            </option>
+                          </>
+                        ) : null}
                       </select>
                     </label>
 
@@ -1798,7 +2046,10 @@ export function PanelPage() {
                     </label>
 
                     <label className="panel-wide-field">
-                      Adjuntar documento legal PDF
+
+                      {editingOrderId
+                        ? "Reemplazar documento legal PDF"
+                        : "Adjuntar documento legal PDF"}
                       <input
                         type="file"
                         accept="application/pdf"
@@ -1821,8 +2072,25 @@ export function PanelPage() {
                     </div>
 
                     <button type="submit" disabled={isLoading}>
-                      {isLoading ? "Guardando..." : "Guardar orden"}
+                      {isLoading
+                        ? "Guardando..."
+                        : editingOrderId
+                          ? "Guardar cambios"
+                          : "Guardar orden"}
                     </button>
+
+                    {editingOrderId ? (
+                      <button
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => {
+                          resetOrderForm();
+                          setOrderView("list");
+                        }}
+                      >
+                        Cancelar edici?n
+                      </button>
+                    ) : null}
                   </form>
                 ) : null}
 
@@ -1962,6 +2230,18 @@ export function PanelPage() {
                                     }
                                   >
                                     Email
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="panel-table-action"
+                                    title="Editar orden"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      beginEditOrder(order)
+                                    }
+                                  >
+                                    Editar
                                   </button>
                                 </div>
                               </td>
