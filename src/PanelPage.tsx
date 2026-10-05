@@ -54,7 +54,7 @@ type Order = {
 };
 
 type PanelSection = "dashboard" | "contacts" | "orders" | "pending";
-type ContactView = "create" | "list";
+type ContactView = "create" | "list" | "edit";
 type OrderView = "create" | "list";
 type BillingMode = "hours" | "service";
 type PaymentRegion = "argentina" | "colombia" | "world";
@@ -178,6 +178,8 @@ export function PanelPage() {
     company: "",
     notes: "",
   });
+
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
 
   const [orderForm, setOrderForm] = useState({
     contactId: "",
@@ -479,6 +481,89 @@ export function PanelPage() {
     }
   }
 
+
+  function resetContactForm() {
+    setContactForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      country: "",
+      city: "",
+      company: "",
+      notes: "",
+    });
+  }
+
+  function beginEditContact(contact: Contact) {
+    setEditingContactId(contact.id);
+
+    setContactForm({
+      firstName: contact.firstName || "",
+      lastName: contact.lastName || "",
+      email: contact.email || "",
+      phone: contact.phone || "",
+      country: contact.country || "",
+      city: contact.city || "",
+      company: contact.company || "",
+      notes: contact.notes || "",
+    });
+
+    setContactView("edit");
+    setMessage("");
+  }
+
+  function cancelEditContact() {
+    setEditingContactId(null);
+    resetContactForm();
+    setContactView("list");
+  }
+
+  async function handleUpdateContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    setIsLoading(true);
+
+    try {
+      if (!editingContactId) {
+        throw new Error("No hay un contacto seleccionado.");
+      }
+
+      if (!contactForm.firstName.trim()) {
+        throw new Error("El nombre es obligatorio.");
+      }
+
+      await apiFetch(`/api/panel/contacts/${editingContactId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          firstName: contactForm.firstName.trim(),
+          lastName: contactForm.lastName.trim(),
+          email: contactForm.email.trim(),
+          phone: contactForm.phone.trim(),
+          country: contactForm.country.trim(),
+          city: contactForm.city.trim(),
+          company: contactForm.company.trim(),
+          notes: contactForm.notes.trim(),
+        }),
+      });
+
+      await loadContacts();
+
+      setEditingContactId(null);
+      resetContactForm();
+      setContactView("list");
+      setMessage("Contacto actualizado.");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Error al actualizar contacto."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handleCreateContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
@@ -503,16 +588,8 @@ export function PanelPage() {
         }),
       });
 
-      setContactForm({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        country: "",
-        city: "",
-        company: "",
-        notes: "",
-      });
+      resetContactForm();
+      setEditingContactId(null);
 
       await loadContacts();
       setContactView("list");
@@ -1268,8 +1345,15 @@ export function PanelPage() {
                   </button>
                 </div>
 
-                {contactView === "create" ? (
-                  <form className="panel-contact-form" onSubmit={handleCreateContact}>
+                {contactView === "create" || contactView === "edit" ? (
+                  <form
+                    className="panel-contact-form"
+                    onSubmit={
+                      contactView === "edit"
+                        ? handleUpdateContact
+                        : handleCreateContact
+                    }
+                  >
                     <label>
                       Nombre *
                       <input
@@ -1376,8 +1460,23 @@ export function PanelPage() {
                     </label>
 
                     <button type="submit" disabled={isLoading}>
-                      {isLoading ? "Guardando..." : "Crear contacto"}
+                      {isLoading
+                        ? "Guardando..."
+                        : contactView === "edit"
+                          ? "Guardar cambios"
+                          : "Crear contacto"}
                     </button>
+
+                    {contactView === "edit" ? (
+                      <button
+                        type="button"
+                        className="panel-contact-cancel"
+                        disabled={isLoading}
+                        onClick={cancelEditContact}
+                      >
+                        Cancelar
+                      </button>
+                    ) : null}
                   </form>
                 ) : null}
 
@@ -1415,6 +1514,14 @@ export function PanelPage() {
                             </span>
                             <span>{contact.notes || "Sin notas"}</span>
                           </div>
+
+                          <button
+                            type="button"
+                            className="panel-contact-edit-button"
+                            onClick={() => beginEditContact(contact)}
+                          >
+                            ✎ Editar
+                          </button>
                         </article>
                       ))
                     )}
@@ -1720,94 +1827,148 @@ export function PanelPage() {
                 ) : null}
 
                 {orderView === "list" ? (
-                  <div className="panel-order-list">
+                  <div className="panel-order-table-wrap">
                     {orders.length === 0 ? (
                       <div className="panel-empty">
-                        <p>Aún no hay órdenes creadas. La primera orden real será la #682.</p>
+                        <p>Aún no hay órdenes creadas.</p>
                       </div>
                     ) : (
-                      orders.map((order) => (
-                        <article key={order.id} className="panel-order-item">
-                          <div>
-                            <strong>Orden #{order.number}</strong>
-                            <span>{order.description}</span>
-                            <span>
-                              {order.contact
-                                ? `${order.contact.firstName} ${
-                                    order.contact.lastName || ""
-                                  } - ${order.contact.email || "sin email"}`
-                                : "Sin contacto"}
-                            </span>
-                          </div>
+                      <table className="panel-order-table">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Cliente</th>
+                            <th>Servicio</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Emisión</th>
+                            <th>Vence</th>
+                            <th>PDF</th>
+                            <th>Acciones</th>
+                          </tr>
+                        </thead>
 
-                          <div>
-                            <strong>{formatMoney(Number(order.total))}</strong>
-                            <span>{formatOrderStatus(order.status)}</span>
-                            <span>
-                              {order.document?.fileName
-                                ? `PDF adjunto: ${order.document.fileName}`
-                                : "Sin PDF adjunto"}
-                            </span>
-                            <span>
-                              {order.dueDate
-                                ? `Vence: ${new Date(order.dueDate).toLocaleDateString("es-AR")}`
-                                : "Sin vencimiento"}
-                            </span>
+                        <tbody>
+                          {orders.map((order) => (
+                            <tr key={order.id}>
+                              <td className="panel-order-number">
+                                #{order.number}
+                              </td>
 
-                            <div className="panel-order-actions-row">
-                              <button
-                                type="button"
-                                className="panel-small-action"
-                                onClick={() => downloadOrderPdf(order)}
+                              <td className="panel-order-customer-cell">
+                                <strong>
+                                  {order.contact
+                                    ? `${order.contact.firstName} ${order.contact.lastName || ""}`.trim()
+                                    : "Sin contacto"}
+                                </strong>
+
+                                <small>
+                                  {order.contact?.email || "Sin email"}
+                                </small>
+                              </td>
+
+                              <td
+                                className="panel-order-service-cell"
+                                title={order.description}
                               >
-                                Descargar PDF
-                              </button>
+                                {order.description}
+                              </td>
 
-                              <button
-                                type="button"
-                                className="panel-small-action"
-                                onClick={() => downloadOrderImage(order)}
-                              >
-                                Descargar imagen
-                              </button>
+                              <td className="panel-order-money-cell">
+                                {formatMoney(Number(order.total))}
+                              </td>
 
-                              <label
-                                className="panel-small-action"
-                                style={{ cursor: "pointer" }}
-                              >
-                                {order.document?.fileName
-                                  ? "Reemplazar PDF"
-                                  : "Adjuntar PDF"}
+                              <td>
+                                <span
+                                  className={`panel-order-status panel-order-status-${order.status.toLowerCase()}`}
+                                >
+                                  {formatOrderStatus(order.status)}
+                                </span>
+                              </td>
 
-                                <input
-                                  type="file"
-                                  accept="application/pdf"
-                                  style={{ display: "none" }}
-                                  disabled={isLoading}
-                                  onChange={async (event) => {
-                                    const file = event.target.files?.[0];
+                              <td>
+                                {order.issueDate
+                                  ? new Date(order.issueDate).toLocaleDateString("es-AR")
+                                  : "—"}
+                              </td>
 
-                                    if (!file) {
-                                      return;
+                              <td>
+                                {order.dueDate
+                                  ? new Date(order.dueDate).toLocaleDateString("es-AR")
+                                  : "—"}
+                              </td>
+
+                              <td className="panel-order-pdf-cell">
+                                {order.document?.fileName ? "Sí" : "—"}
+                              </td>
+
+                              <td>
+                                <div className="panel-order-table-actions">
+                                  <button
+                                    type="button"
+                                    className="panel-table-action"
+                                    title="Descargar PDF"
+                                    onClick={() => downloadOrderPdf(order)}
+                                  >
+                                    PDF
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="panel-table-action"
+                                    title="Descargar imagen"
+                                    onClick={() => downloadOrderImage(order)}
+                                  >
+                                    IMG
+                                  </button>
+
+                                  <label
+                                    className="panel-table-action"
+                                    title={
+                                      order.document?.fileName
+                                        ? "Reemplazar PDF"
+                                        : "Adjuntar PDF"
                                     }
+                                  >
+                                    {order.document?.fileName
+                                      ? "Cambiar"
+                                      : "Adjuntar"}
 
-                                    await replaceOrderDocument(order, file);
-                                    event.currentTarget.value = "";
-                                  }}
-                                />
-                              </label>
+                                    <input
+                                      type="file"
+                                      accept="application/pdf"
+                                      style={{ display: "none" }}
+                                      disabled={isLoading}
+                                      onChange={async (event) => {
+                                        const file = event.target.files?.[0];
 
-                              <button
-                                type="button"
-                                className="panel-small-action"
-                                onClick={() => prepareEmailOrder(order, "send")}
-                              >
-                                Enviar email
-                              </button>
-                            </div>
-                          </div>
-                        </article>
-                      ))
+                                        if (!file) {
+                                          return;
+                                        }
+
+                                        await replaceOrderDocument(order, file);
+                                        event.currentTarget.value = "";
+                                      }}
+                                    />
+                                  </label>
+
+                                  <button
+                                    type="button"
+                                    className="panel-table-action"
+                                    title="Enviar por email"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      prepareEmailOrder(order, "send")
+                                    }
+                                  >
+                                    Email
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     )}
                   </div>
                 ) : null}
