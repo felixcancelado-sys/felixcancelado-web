@@ -23,10 +23,28 @@ type Contact = {
   status?: string;
 };
 
+type OrderItemData = {
+  id?: string;
+  description: string;
+  detail?: string | null;
+  quantity: string | number;
+  unitPrice: string | number;
+  total: string | number;
+  position?: number;
+};
+
+type AdditionalOrderItem = {
+  key: string;
+  description: string;
+  detail: string;
+  quantity: string;
+  unitPrice: string;
+};
 type Order = {
   id: string;
   number: number;
   contactId: string;
+  items?: OrderItemData[];
   description: string;
   detail?: string | null;
   status: string;
@@ -201,6 +219,8 @@ export function PanelPage() {
     internalNotes: "",
   });
 
+  const [additionalItems, setAdditionalItems] = useState<AdditionalOrderItem[]>([]);
+
   const [orderDocument, setOrderDocument] = useState<File | null>(null);
   const [billingMode, setBillingMode] = useState<BillingMode>("hours");
   const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>("argentina");
@@ -212,7 +232,7 @@ export function PanelPage() {
 
   const isConfigured = useMemo(() => API_BASE_URL.length > 0, []);
 
-  const estimatedSubtotal = useMemo(() => {
+  const mainServiceSubtotal = useMemo(() => {
     if (billingMode === "service") {
       return optionalNumber(orderForm.serviceTotal) || 0;
     }
@@ -221,6 +241,17 @@ export function PanelPage() {
     const rate = optionalNumber(orderForm.rate) || 0;
     return hours * rate;
   }, [billingMode, orderForm.hours, orderForm.rate, orderForm.serviceTotal]);
+
+  const additionalItemsSubtotal = useMemo(() => {
+    return additionalItems.reduce((sum, item) => {
+      const quantity = optionalNumber(item.quantity) || 0;
+      const unitPrice = optionalNumber(item.unitPrice) || 0;
+      return sum + quantity * unitPrice;
+    }, 0);
+  }, [additionalItems]);
+
+  const estimatedSubtotal =
+    mainServiceSubtotal + additionalItemsSubtotal;
 
   const estimatedDiscount = useMemo(() => {
     const value = optionalNumber(orderForm.discount) || 0;
@@ -636,12 +667,118 @@ export function PanelPage() {
     setEditingOrderId(null);
   }
 
+
+  function addAdditionalItem() {
+    setAdditionalItems((current) => [
+      ...current,
+      {
+        key: `${Date.now()}-${Math.random()}`,
+        description: "",
+        detail: "",
+        quantity: "1",
+        unitPrice: "",
+      },
+    ]);
+  }
+
+  function updateAdditionalItem(
+    key: string,
+    field: "description" | "detail" | "quantity" | "unitPrice",
+    value: string
+  ) {
+    setAdditionalItems((current) =>
+      current.map((item) =>
+        item.key === key
+          ? {
+              ...item,
+              [field]: value,
+            }
+          : item
+      )
+    );
+  }
+
+  function removeAdditionalItem(key: string) {
+    setAdditionalItems((current) =>
+      current.filter((item) => item.key !== key)
+    );
+  }
+
+  function validateAdditionalItems() {
+    const invalidItem = additionalItems.find((item) => {
+      const quantity = optionalNumber(item.quantity) || 0;
+      const unitPrice = optionalNumber(item.unitPrice);
+
+      return (
+        !item.description.trim() ||
+        quantity <= 0 ||
+        unitPrice === undefined ||
+        unitPrice < 0
+      );
+    });
+
+    if (invalidItem) {
+      throw new Error(
+        "Completa descripción, cantidad y precio de todos los servicios adicionales."
+      );
+    }
+  }
+
+  function buildOrderItemsPayload() {
+    const mainQuantity =
+      billingMode === "hours"
+        ? optionalNumber(orderForm.hours) || 0
+        : 1;
+
+    const mainUnitPrice =
+      billingMode === "hours"
+        ? optionalNumber(orderForm.rate) || 0
+        : optionalNumber(orderForm.serviceTotal) || 0;
+
+    return [
+      {
+        description: orderForm.description.trim(),
+        detail: orderForm.detail.trim() || undefined,
+        quantity: mainQuantity,
+        unitPrice: mainUnitPrice,
+        total: mainServiceSubtotal,
+      },
+      ...additionalItems.map((item) => {
+        const quantity = optionalNumber(item.quantity) || 0;
+        const unitPrice = optionalNumber(item.unitPrice) || 0;
+
+        return {
+          description: item.description.trim(),
+          detail: item.detail.trim() || undefined,
+          quantity,
+          unitPrice,
+          total: quantity * unitPrice,
+        };
+      }),
+    ];
+  }
   function beginEditOrder(order: Order) {
     const hasHours =
       Number(order.hours || 0) > 0 &&
       Number(order.rate || 0) > 0;
 
     setEditingOrderId(order.id);
+    const storedOrderItems = order.items || [];
+
+    setAdditionalItems(
+      storedOrderItems.length > 1
+        ? storedOrderItems.slice(1).map((item, index) => ({
+            key:
+              item.id ||
+              `existing-${order.id}-${index}`,
+            description: item.description || "",
+            detail: item.detail || "",
+            quantity: String(item.quantity ?? 1),
+            unitPrice: String(item.unitPrice ?? ""),
+          }))
+        : []
+    );
+
 
     setOrderForm({
       contactId: order.contactId,
@@ -721,6 +858,8 @@ export function PanelPage() {
         throw new Error("La descripcion es obligatoria.");
       }
 
+      validateAdditionalItems();
+
       if (estimatedTotal <= 0) {
         throw new Error("La orden debe tener un total mayor a cero.");
       }
@@ -743,6 +882,7 @@ export function PanelPage() {
             discountValue: optionalNumber(orderForm.discount) || 0,
           total: estimatedTotal,
           clientNotes: orderForm.clientNotes.trim() || undefined,
+          items: buildOrderItemsPayload(),
           internalNotes: [
             orderForm.internalNotes.trim(),
             `Tipo de cobro: ${billingMode === "hours" ? "Por horas" : "Servicio cerrado"}`,
@@ -779,6 +919,7 @@ export function PanelPage() {
         internalNotes: "",
       });
 
+      setAdditionalItems([]);
       setOrderDocument(null);
       setBillingMode("hours");
       setPaymentRegion("argentina");
@@ -819,6 +960,8 @@ export function PanelPage() {
           "La descripcion es obligatoria."
         );
       }
+
+      validateAdditionalItems();
 
       if (estimatedTotal <= 0) {
         throw new Error(
@@ -1051,273 +1194,547 @@ export function PanelPage() {
     const customer = getOrderCustomerName(order);
     const customerLocation = getOrderCustomerLocation(order);
     const payment = getOrderPaymentDetails(order);
+
     const issueDate = order.issueDate
       ? new Date(order.issueDate).toLocaleDateString("es-AR")
       : "";
+
     const dueDate = order.dueDate
       ? new Date(order.dueDate).toLocaleDateString("es-AR")
       : "Sin vencimiento";
-
-    const hasClientNotes = Boolean(
-      order.clientNotes?.trim()
-    );
-
-    const canvas = document.createElement("canvas");
-    const width = 1080;
-    const height = hasClientNotes ? 1900 : 1450;
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-      throw new Error("No se pudo generar la orden.");
-    }
-
-    canvas.width = width;
-    canvas.height = height;
-
-    const logo = await loadLogoImage();
-
-    context.fillStyle = "#f1f5f9";
-    context.fillRect(0, 0, width, height);
-
-    context.fillStyle = "#ffffff";
-    context.beginPath();
-    context.roundRect(
-      70,
-      70,
-      940,
-      height - 140,
-      34
-    );
-    context.fill();
-
-    if (logo) {
-      context.drawImage(logo, 115, 115, 86, 86);
-    }
-
-    context.fillStyle = "#0f766e";
-    context.font = "bold 26px Arial";
-    context.fillText("FÉLIX CANCELADO", logo ? 225 : 115, 148);
-
-    context.fillStyle = "#0f172a";
-    context.font = "bold 72px Arial";
-    context.fillText("Orden", logo ? 225 : 115, 232);
-
-    context.font = "bold 34px Arial";
-    context.fillText(`#${order.number}`, 820, 148);
-
-    context.font = "24px Arial";
-    context.fillText(formatOrderStatus(order.status), 780, 190);
-
-    context.strokeStyle = "#e2e8f0";
-    context.lineWidth = 3;
-    context.beginPath();
-    context.moveTo(115, 300);
-    context.lineTo(965, 300);
-    context.stroke();
-
-    context.fillStyle = "#64748b";
-    context.font = "bold 22px Arial";
-    context.fillText("CLIENTE", 115, 365);
-
-    context.fillStyle = "#0f172a";
-    context.font = "bold 34px Arial";
-    formatCanvasText(context, customer, 115, 412, 780, 40, 2);
-
-    context.font = "24px Arial";
-    let customerY = 470;
-    if (order.contact?.email) {
-      context.fillText(order.contact.email, 115, customerY);
-      customerY += 36;
-    }
-
-    if (customerLocation) {
-      context.fillText(customerLocation, 115, customerY);
-    }
-
-    context.fillStyle = "#64748b";
-    context.font = "bold 22px Arial";
-    context.fillText("FECHAS", 650, 365);
-
-    context.fillStyle = "#0f172a";
-    context.font = "24px Arial";
-    context.fillText(`Emisión: ${issueDate}`, 650, 412);
-    context.fillText(`Vence: ${dueDate}`, 650, 450);
-
-    context.fillStyle = "#f8fafc";
-    context.beginPath();
-    context.roundRect(115, 560, 850, 300, 26);
-    context.fill();
-
-    context.strokeStyle = "#e2e8f0";
-    context.lineWidth = 2;
-    context.strokeRect(115, 560, 850, 300);
-
-    context.fillStyle = "#64748b";
-    context.font = "bold 22px Arial";
-    context.fillText("SERVICIO / DESCRIPCIÓN", 150, 620);
-
-    context.fillStyle = "#0f172a";
-    context.font = "bold 34px Arial";
-    let y = formatCanvasText(context, order.description || "Servicio", 150, 675, 760, 42, 3);
-
-    if (order.detail) {
-      context.fillStyle = "#334155";
-      context.font = "24px Arial";
-      y = formatCanvasText(
-        context,
-        order.detail,
-        150,
-        y + 22,
-        760,
-        34,
-        5
-      );
-    }
-
-    let summaryY = 900;
-
-    if (hasClientNotes) {
-      const notesY = Math.max(
-        900,
-        y + 40
-      );
-
-      const notesHeight = 210;
-
-      context.fillStyle = "#fff7ed";
-      context.beginPath();
-
-      context.roundRect(
-        115,
-        notesY,
-        850,
-        notesHeight,
-        26
-      );
-
-      context.fill();
-
-      context.strokeStyle = "#fed7aa";
-      context.lineWidth = 2;
-
-      context.strokeRect(
-        115,
-        notesY,
-        850,
-        notesHeight
-      );
-
-      context.fillStyle = "#9a3412";
-      context.font = "bold 22px Arial";
-
-      context.fillText(
-        "OBSERVACIONES PARA EL CLIENTE",
-        150,
-        notesY + 48
-      );
-
-      context.fillStyle = "#334155";
-      context.font = "23px Arial";
-
-      formatCanvasText(
-        context,
-        order.clientNotes || "",
-        150,
-        notesY + 95,
-        760,
-        31,
-        4
-      );
-
-      summaryY =
-        notesY + notesHeight + 30;
-    }
 
     const subtotal = Number(order.subtotal || order.total || 0);
     const discount = Number(order.discount || 0);
     const total = Number(order.total || 0);
 
+    const legacyQuantity =
+      Number(order.quantity || order.hours || 1) || 1;
+
+    const legacyUnitPrice =
+      Number(order.rate || 0) ||
+      (legacyQuantity > 0
+        ? subtotal / legacyQuantity
+        : subtotal);
+
+    const displayItems: OrderItemData[] =
+      order.items && order.items.length > 0
+        ? order.items
+        : [
+            {
+              description:
+                order.description || "Servicio",
+              detail: order.detail || "",
+              quantity: legacyQuantity,
+              unitPrice: legacyUnitPrice,
+              total: subtotal,
+            },
+          ];
+
+    const hasClientNotes = Boolean(
+      order.clientNotes?.trim()
+    );
+
+    const rowHeight = 105;
+    const servicesHeight =
+      70 + displayItems.length * rowHeight;
+
+    const servicesTop = 450;
+    const afterServices =
+      servicesTop + servicesHeight + 35;
+
+    const summaryHeight =
+      hasClientNotes ? 250 : 205;
+
+    const bankTop =
+      afterServices + summaryHeight + 35;
+
+    const height = bankTop + 220;
+
+    const canvas =
+      document.createElement("canvas");
+
+    canvas.width = 1080;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error(
+        "No se pudo generar la orden."
+      );
+    }
+
+    const logo = await loadLogoImage();
+
+    // Fondo
+    context.fillStyle = "#f1f5f9";
+    context.fillRect(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    // Hoja
+    context.fillStyle = "#ffffff";
+    context.beginPath();
+    context.roundRect(
+      55,
+      55,
+      970,
+      height - 110,
+      34
+    );
+    context.fill();
+
+    // Línea superior
+    context.fillStyle = "#0f9f8f";
+    context.beginPath();
+    context.roundRect(
+      55,
+      55,
+      970,
+      14,
+      8
+    );
+    context.fill();
+
+    // Logo
+    if (logo) {
+      context.drawImage(
+        logo,
+        95,
+        105,
+        82,
+        82
+      );
+    }
+
+    context.fillStyle = "#0f766e";
+    context.font = "bold 25px Arial";
+    context.fillText(
+      "FÉLIX CANCELADO",
+      logo ? 205 : 95,
+      135
+    );
+
+    context.fillStyle = "#0f172a";
+    context.font = "bold 64px Arial";
+    context.fillText(
+      "Orden",
+      logo ? 205 : 95,
+      205
+    );
+
+    // Número y estado
     context.fillStyle = "#f8fafc";
     context.beginPath();
     context.roundRect(
+      810,
+      95,
+      165,
+      125,
+      24
+    );
+    context.fill();
+
+    context.fillStyle = "#0f172a";
+    context.font = "bold 38px Arial";
+    context.textAlign = "center";
+    context.fillText(
+      `#${order.number}`,
+      892,
+      145
+    );
+
+    context.fillStyle = "#991b1b";
+    context.font = "21px Arial";
+    context.fillText(
+      formatOrderStatus(order.status),
+      892,
+      190
+    );
+
+    context.textAlign = "left";
+
+    // Separador
+    context.strokeStyle = "#e2e8f0";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(95, 260);
+    context.lineTo(985, 260);
+    context.stroke();
+
+    // Cliente + fechas compactas
+    context.fillStyle = "#f8fafc";
+    context.beginPath();
+    context.roundRect(
+      95,
+      290,
+      890,
       115,
-      summaryY,
-      850,
-      180,
-      26
+      20
     );
     context.fill();
 
     context.fillStyle = "#64748b";
-    context.font = "bold 22px Arial";
+    context.font = "bold 18px Arial";
     context.fillText(
-      "RESUMEN",
-      150,
-      summaryY + 55
+      "CLIENTE",
+      125,
+      325
     );
 
     context.fillStyle = "#0f172a";
-    context.font = "24px Arial";
-    context.fillText(
-      "Subtotal",
-      150,
-      summaryY + 105
-    );
-    context.fillText(
-      formatMoney(subtotal),
-      760,
-      summaryY + 105
-    );
+    context.font = "bold 26px Arial";
 
-    context.fillText(
-      "Descuento",
-      150,
-      summaryY + 145
-    );
-    context.fillText(
-      formatMoney(discount),
-      760,
-      summaryY + 145
-    );
-
-    context.fillStyle = "#0f766e";
-    context.font = "bold 54px Arial";
-    context.fillText(
-      `Total: ${formatMoney(total)}`,
-      150,
-      summaryY + 245
-    );
-
-    context.fillStyle = "#ecfeff";
-    context.beginPath();
-    const paymentY =
-      summaryY + 310;
-
-    context.roundRect(
-      115,
-      paymentY,
-      850,
+    formatCanvasText(
+      context,
+      customer,
       125,
-      26
+      360,
+      360,
+      30,
+      1
+    );
+
+    context.font = "17px Arial";
+    context.fillStyle = "#475569";
+
+    const customerMeta = [
+      order.contact?.email,
+      customerLocation,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    formatCanvasText(
+      context,
+      customerMeta,
+      125,
+      390,
+      390,
+      22,
+      1
+    );
+
+    context.fillStyle = "#64748b";
+    context.font = "bold 18px Arial";
+    context.fillText(
+      "FECHAS",
+      600,
+      325
+    );
+
+    context.fillStyle = "#0f172a";
+    context.font = "19px Arial";
+    context.fillText(
+      `Emisión: ${issueDate}`,
+      600,
+      360
+    );
+
+    context.fillText(
+      `Vence: ${dueDate}`,
+      600,
+      390
+    );
+
+    // Servicios
+    context.fillStyle = "#0f766e";
+    context.font = "bold 34px Arial";
+    context.fillText(
+      "Servicios",
+      95,
+      servicesTop
+    );
+
+    const tableTop =
+      servicesTop + 35;
+
+    context.fillStyle = "#eaf3f7";
+    context.beginPath();
+    context.roundRect(
+      95,
+      tableTop,
+      890,
+      48,
+      12
     );
     context.fill();
 
-    context.fillStyle = "#0f172a";
-    context.font = "bold 28px Arial";
+    context.fillStyle = "#334155";
+    context.font = "bold 18px Arial";
+
     context.fillText(
-      payment.label,
-      150,
-      paymentY + 50
+      "Servicio",
+      120,
+      tableTop + 31
     );
 
-    context.font = "22px Arial";
-    payment.lines.forEach((line: string, index: number) => {
-      context.fillText(
-        line,
-        150,
-        paymentY + 90 + index * 30
+    context.textAlign = "right";
+    context.fillText(
+      "Cant.",
+      650,
+      tableTop + 31
+    );
+
+    context.fillText(
+      "Precio unit.",
+      800,
+      tableTop + 31
+    );
+
+    context.fillText(
+      "Total",
+      955,
+      tableTop + 31
+    );
+
+    context.textAlign = "left";
+
+    let rowY =
+      tableTop + 48;
+
+    displayItems.forEach((item) => {
+      context.strokeStyle = "#e2e8f0";
+      context.lineWidth = 1;
+
+      context.beginPath();
+      context.moveTo(110, rowY + rowHeight);
+      context.lineTo(970, rowY + rowHeight);
+      context.stroke();
+
+      context.fillStyle = "#0f172a";
+      context.font = "bold 21px Arial";
+
+      formatCanvasText(
+        context,
+        item.description || "Servicio",
+        120,
+        rowY + 35,
+        420,
+        25,
+        1
       );
+
+      if (item.detail) {
+        context.fillStyle = "#64748b";
+        context.font = "16px Arial";
+
+        formatCanvasText(
+          context,
+          item.detail,
+          120,
+          rowY + 65,
+          420,
+          20,
+          2
+        );
+      }
+
+      context.fillStyle = "#0f172a";
+      context.font = "19px Arial";
+      context.textAlign = "right";
+
+      context.fillText(
+        String(Number(item.quantity || 0)),
+        650,
+        rowY + 45
+      );
+
+      context.fillText(
+        formatMoney(
+          Number(item.unitPrice || 0)
+        ),
+        800,
+        rowY + 45
+      );
+
+      context.font = "bold 20px Arial";
+
+      context.fillText(
+        formatMoney(
+          Number(item.total || 0)
+        ),
+        955,
+        rowY + 45
+      );
+
+      context.textAlign = "left";
+
+      rowY += rowHeight;
     });
+
+    // Observaciones
+    const summaryTop =
+      afterServices;
+
+    if (hasClientNotes) {
+      context.fillStyle = "#fff7ed";
+      context.beginPath();
+      context.roundRect(
+        95,
+        summaryTop,
+        505,
+        summaryHeight,
+        22
+      );
+      context.fill();
+
+      context.fillStyle = "#9a3412";
+      context.font = "bold 21px Arial";
+      context.fillText(
+        "OBSERVACIONES",
+        125,
+        summaryTop + 42
+      );
+
+      context.fillStyle = "#334155";
+      context.font = "18px Arial";
+
+      formatCanvasText(
+        context,
+        order.clientNotes || "",
+        125,
+        summaryTop + 82,
+        435,
+        26,
+        5
+      );
+    }
+
+    // Resumen
+    const summaryX =
+      hasClientNotes ? 625 : 430;
+
+    const summaryWidth =
+      hasClientNotes ? 360 : 555;
+
+    context.fillStyle = "#f8fafc";
+    context.beginPath();
+    context.roundRect(
+      summaryX,
+      summaryTop,
+      summaryWidth,
+      summaryHeight,
+      22
+    );
+    context.fill();
+
+    context.fillStyle = "#334155";
+    context.font = "bold 23px Arial";
+    context.fillText(
+      "RESUMEN",
+      summaryX + 28,
+      summaryTop + 42
+    );
+
+    context.font = "19px Arial";
+    context.fillStyle = "#0f172a";
+
+    context.fillText(
+      "Subtotal",
+      summaryX + 28,
+      summaryTop + 86
+    );
+
+    context.textAlign = "right";
+
+    context.fillText(
+      formatMoney(subtotal),
+      summaryX + summaryWidth - 28,
+      summaryTop + 86
+    );
+
+    context.textAlign = "left";
+
+    const discountLabel =
+      order.discountType === "PERCENT"
+        ? `Descuento ${Number(
+            order.discountValue || 0
+          )}%`
+        : "Descuento";
+
+    context.fillText(
+      discountLabel,
+      summaryX + 28,
+      summaryTop + 124
+    );
+
+    context.fillStyle = "#059669";
+    context.textAlign = "right";
+
+    context.fillText(
+      `- ${formatMoney(discount)}`,
+      summaryX + summaryWidth - 28,
+      summaryTop + 124
+    );
+
+    context.textAlign = "left";
+
+    // Total destacado
+    context.fillStyle = "#d1fae5";
+    context.beginPath();
+    context.roundRect(
+      summaryX + 18,
+      summaryTop + 145,
+      summaryWidth - 36,
+      72,
+      18
+    );
+    context.fill();
+
+    context.fillStyle = "#0f766e";
+    context.font = "bold 25px Arial";
+    context.fillText(
+      "Total",
+      summaryX + 35,
+      summaryTop + 191
+    );
+
+    context.fillStyle = "#0f172a";
+    context.font = "bold 31px Arial";
+    context.textAlign = "right";
+
+    context.fillText(
+      formatMoney(total),
+      summaryX + summaryWidth - 35,
+      summaryTop + 192
+    );
+
+    context.textAlign = "left";
+
+    // Datos bancarios compactos
+    context.strokeStyle = "#e2e8f0";
+    context.beginPath();
+    context.moveTo(95, bankTop);
+    context.lineTo(985, bankTop);
+    context.stroke();
+
+    context.fillStyle = "#0f766e";
+    context.font = "bold 21px Arial";
+    context.fillText(
+      payment.label,
+      105,
+      bankTop + 50
+    );
+
+    const paymentText =
+      payment.lines.join(" · ");
+
+    context.fillStyle = "#334155";
+    context.font = "16px Arial";
+
+    formatCanvasText(
+      context,
+      paymentText,
+      330,
+      bankTop + 40,
+      625,
+      22,
+      3
+    );
 
     return canvas;
   }
@@ -2199,6 +2616,137 @@ export function PanelPage() {
                       </label>
                     )}
 
+
+                    <section className="panel-additional-services">
+                      <div className="panel-additional-services-header">
+                        <div>
+                          <strong>Servicios / productos adicionales</strong>
+                          <span>
+                            Agrega otros conceptos dentro de esta misma orden.
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="panel-add-service-button"
+                          onClick={addAdditionalItem}
+                        >
+                          + Agregar servicio
+                        </button>
+                      </div>
+
+                      {additionalItems.length === 0 ? (
+                        <div className="panel-additional-empty">
+                          Esta orden tiene un solo servicio.
+                        </div>
+                      ) : (
+                        <div className="panel-additional-list">
+                          {additionalItems.map((item, index) => {
+                            const quantity =
+                              optionalNumber(item.quantity) || 0;
+
+                            const unitPrice =
+                              optionalNumber(item.unitPrice) || 0;
+
+                            const itemTotal =
+                              quantity * unitPrice;
+
+                            return (
+                              <div
+                                className="panel-additional-item"
+                                key={item.key}
+                              >
+                                <div className="panel-additional-item-header">
+                                  <strong>
+                                    Servicio {index + 2}
+                                  </strong>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeAdditionalItem(item.key)
+                                    }
+                                  >
+                                    Eliminar
+                                  </button>
+                                </div>
+
+                                <label className="panel-wide-field">
+                                  Descripción
+                                  <input
+                                    value={item.description}
+                                    placeholder="Ej.: Clases de inglés - Roxana"
+                                    onChange={(event) =>
+                                      updateAdditionalItem(
+                                        item.key,
+                                        "description",
+                                        event.target.value
+                                      )
+                                    }
+                                  />
+                                </label>
+
+                                <label className="panel-wide-field">
+                                  Detalle
+                                  <textarea
+                                    value={item.detail}
+                                    placeholder="Ej.: Días 3, 6, 10, 13..."
+                                    onChange={(event) =>
+                                      updateAdditionalItem(
+                                        item.key,
+                                        "detail",
+                                        event.target.value
+                                      )
+                                    }
+                                  />
+                                </label>
+
+                                <div className="panel-additional-numbers">
+                                  <label>
+                                    Cantidad
+                                    <input
+                                      inputMode="decimal"
+                                      value={item.quantity}
+                                      placeholder="1"
+                                      onChange={(event) =>
+                                        updateAdditionalItem(
+                                          item.key,
+                                          "quantity",
+                                          event.target.value
+                                        )
+                                      }
+                                    />
+                                  </label>
+
+                                  <label>
+                                    Precio unitario
+                                    <input
+                                      inputMode="decimal"
+                                      value={item.unitPrice}
+                                      placeholder="21000"
+                                      onChange={(event) =>
+                                        updateAdditionalItem(
+                                          item.key,
+                                          "unitPrice",
+                                          event.target.value
+                                        )
+                                      }
+                                    />
+                                  </label>
+
+                                  <div className="panel-additional-total">
+                                    <span>Total</span>
+                                    <strong>
+                                      {formatMoney(itemTotal)}
+                                    </strong>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </section>
                     <div className="panel-discount-fields">
                       <label>
                         Tipo de descuento

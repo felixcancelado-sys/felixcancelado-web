@@ -2892,3 +2892,135 @@
     grid-column: auto;
   }
 }
+/* ==========================================================
+   MULTIPLES SERVICIOS 2026
+   ========================================================== */
+
+.panel-additional-services {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding: 18px;
+  border: 1px solid rgba(99, 240, 184, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.panel-additional-services-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.panel-additional-services-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.panel-additional-services-header strong {
+  font-size: 1rem;
+}
+
+.panel-additional-services-header span {
+  font-size: 0.78rem;
+  opacity: 0.62;
+}
+
+.panel-add-service-button {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #63f0b8;
+  color: #052019;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.panel-additional-empty {
+  padding: 16px;
+  border: 1px dashed rgba(255,255,255,.15);
+  border-radius: 12px;
+  font-size: .84rem;
+  opacity: .55;
+}
+
+.panel-additional-list {
+  display: grid;
+  gap: 14px;
+}
+
+.panel-additional-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 15px;
+  background: rgba(255,255,255,.035);
+}
+
+.panel-additional-item-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-additional-item-header button {
+  border: 0;
+  background: transparent;
+  color: #fb7185;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.panel-additional-numbers {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr .8fr;
+  gap: 13px;
+  align-items: end;
+}
+
+.panel-additional-total {
+  min-height: 48px;
+  padding: 9px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(99,240,184,.08);
+}
+
+.panel-additional-total span {
+  font-size: .7rem;
+  opacity: .6;
+}
+
+.panel-additional-total strong {
+  margin-top: 2px;
+  color: #63f0b8;
+  font-size: 1rem;
+}
+
+@media (max-width: 760px) {
+  .panel-additional-services-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-add-service-button {
+    align-self: flex-start;
+  }
+
+  .panel-additional-item {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-additional-numbers {
+    grid-template-columns: 1fr;
+  }
+}
