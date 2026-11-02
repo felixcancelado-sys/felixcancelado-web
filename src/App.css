@@ -1,4 +1,4 @@
-﻿#root {
+#root {
   min-height: 100vh;
 }
 
@@ -2827,5 +2827,68 @@
 @media (max-width: 760px) {
   .panel-card {
     width: 100%;
+  }
+}
+
+/* ==========================================================
+   DESCUENTO FLEXIBLE 2026
+   ========================================================== */
+
+.panel-discount-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns:
+    minmax(160px, .8fr)
+    minmax(180px, 1fr)
+    minmax(210px, .9fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.panel-discount-fields select,
+.panel-discount-fields input {
+  width: 100%;
+}
+
+.panel-discount-preview {
+  min-height: 48px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(99, 240, 184, .22);
+  border-radius: 12px;
+  background: rgba(99, 240, 184, .07);
+}
+
+.panel-discount-preview span {
+  font-size: .78rem;
+  font-weight: 700;
+  opacity: .72;
+}
+
+.panel-discount-preview strong {
+  color: #63f0b8;
+  font-size: .98rem;
+}
+
+@media (max-width: 760px) {
+  .panel-discount-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .panel-discount-preview {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .panel-discount-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-discount-preview {
+    grid-column: auto;
   }
 }

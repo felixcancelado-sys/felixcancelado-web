@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { jsPDF } from "jspdf";
 
@@ -34,6 +34,8 @@ type Order = {
   total: string | number;
   subtotal?: string | number;
   discount?: string | number;
+  discountType?: DiscountType;
+  discountValue?: string | number;
   issueDate: string;
   dueDate?: string | null;
   document?: {
@@ -58,6 +60,7 @@ type PanelSection = "dashboard" | "contacts" | "orders" | "pending";
 type ContactView = "create" | "list" | "edit";
 type OrderView = "create" | "list";
 type BillingMode = "hours" | "service";
+type DiscountType = "FIXED" | "PERCENT";
 type PaymentRegion = "argentina" | "colombia" | "world";
 type DashboardView = "aggregate" | "monthly";
 
@@ -193,6 +196,7 @@ export function PanelPage() {
     rate: "",
     serviceTotal: "",
     discount: "0",
+    discountType: "FIXED" as DiscountType,
     clientNotes: "",
     internalNotes: "",
   });
@@ -219,8 +223,15 @@ export function PanelPage() {
   }, [billingMode, orderForm.hours, orderForm.rate, orderForm.serviceTotal]);
 
   const estimatedDiscount = useMemo(() => {
-    return optionalNumber(orderForm.discount) || 0;
-  }, [orderForm.discount]);
+    const value = optionalNumber(orderForm.discount) || 0;
+
+    if (orderForm.discountType === "PERCENT") {
+      const percent = Math.min(Math.max(value, 0), 100);
+      return estimatedSubtotal * (percent / 100);
+    }
+
+    return Math.max(value, 0);
+  }, [estimatedSubtotal, orderForm.discount, orderForm.discountType]);
 
   const estimatedTotal = Math.max(estimatedSubtotal - estimatedDiscount, 0);
 
@@ -613,6 +624,7 @@ export function PanelPage() {
       rate: "",
       serviceTotal: "",
       discount: "0",
+      discountType: "FIXED" as DiscountType,
       clientNotes: "",
       internalNotes: "",
     });
@@ -648,7 +660,12 @@ export function PanelPage() {
       serviceTotal: hasHours
         ? ""
         : String(order.subtotal ?? order.total ?? ""),
-      discount: String(order.discount ?? 0),
+      discount: String(
+        Number(order.discountValue || 0) > 0
+          ? order.discountValue
+          : order.discount ?? 0
+      ),
+      discountType: order.discountType || "FIXED",
       clientNotes: order.clientNotes || "",
       internalNotes: order.internalNotes || "",
     });
@@ -721,7 +738,9 @@ export function PanelPage() {
           rate: billingMode === "hours" ? optionalNumber(orderForm.rate) : undefined,
           quantity: billingMode === "hours" ? optionalNumber(orderForm.hours) : 1,
           subtotal: estimatedSubtotal,
-          discount: optionalNumber(orderForm.discount) || 0,
+          discount: estimatedDiscount,
+            discountType: orderForm.discountType,
+            discountValue: optionalNumber(orderForm.discount) || 0,
           total: estimatedTotal,
           clientNotes: orderForm.clientNotes.trim() || undefined,
           internalNotes: [
@@ -755,6 +774,7 @@ export function PanelPage() {
         rate: "",
         serviceTotal: "",
         discount: "0",
+        discountType: "FIXED" as DiscountType,
         clientNotes: "",
         internalNotes: "",
       });
@@ -850,10 +870,9 @@ export function PanelPage() {
 
             subtotal: estimatedSubtotal,
 
-            discount:
-              optionalNumber(
-                orderForm.discount
-              ) || 0,
+            discount: estimatedDiscount,
+            discountType: orderForm.discountType,
+            discountValue: optionalNumber(orderForm.discount) || 0,
 
             total: estimatedTotal,
 
@@ -2180,19 +2199,50 @@ export function PanelPage() {
                       </label>
                     )}
 
-                    <label>
-                      Descuento
-                      <input
-                        inputMode="decimal"
-                        value={orderForm.discount}
-                        onChange={(event) =>
-                          setOrderForm((current) => ({
-                            ...current,
-                            discount: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
+                    <div className="panel-discount-fields">
+                      <label>
+                        Tipo de descuento
+                        <select
+                          value={orderForm.discountType}
+                          onChange={(event) =>
+                            setOrderForm((current) => ({
+                              ...current,
+                              discountType: event.target.value as DiscountType,
+                            }))
+                          }
+                        >
+                          <option value="FIXED">$ Monto fijo</option>
+                          <option value="PERCENT">% Porcentaje</option>
+                        </select>
+                      </label>
+
+                      <label>
+                        {orderForm.discountType === "PERCENT"
+                          ? "Porcentaje"
+                          : "Monto del descuento"}
+
+                        <input
+                          inputMode="decimal"
+                          value={orderForm.discount}
+                          placeholder={
+                            orderForm.discountType === "PERCENT"
+                              ? "10"
+                              : "42740"
+                          }
+                          onChange={(event) =>
+                            setOrderForm((current) => ({
+                              ...current,
+                              discount: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+
+                      <div className="panel-discount-preview">
+                        <span>Descuento aplicado</span>
+                        <strong>- {formatMoney(estimatedDiscount)}</strong>
+                      </div>
+                    </div>
 
                     <label className="panel-wide-field">
                       Observaciones para el cliente
@@ -2241,8 +2291,12 @@ export function PanelPage() {
                       <span>Subtotal estimado</span>
                       <strong>{formatMoney(estimatedSubtotal)}</strong>
 
-                      <span>Descuento</span>
-                      <strong>{formatMoney(estimatedDiscount)}</strong>
+                      <span>
+                        {orderForm.discountType === "PERCENT"
+                          ? `Descuento ${orderForm.discount || 0}%`
+                          : "Descuento"}
+                      </span>
+                      <strong>- {formatMoney(estimatedDiscount)}</strong>
 
                       <span>Total estimado</span>
                       <strong>{formatMoney(estimatedTotal)}</strong>
