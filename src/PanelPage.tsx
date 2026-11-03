@@ -1489,72 +1489,216 @@ export function PanelPage() {
   }
 
   async function buildOrderCanvas(order: Order) {
-    const customer = getOrderCustomerName(order);
-    const customerLocation = getOrderCustomerLocation(order);
-    const payment = getOrderPaymentDetails(order);
+    const customer =
+      getOrderCustomerName(order);
 
-    const issueDate = order.issueDate
-      ? new Date(order.issueDate).toLocaleDateString("es-AR")
-      : "";
+    const customerLocation =
+      getOrderCustomerLocation(order);
 
-    const dueDate = order.dueDate
-      ? new Date(order.dueDate).toLocaleDateString("es-AR")
-      : "Sin vencimiento";
+    const payment =
+      getOrderPaymentDetails(order);
 
-    const subtotal = Number(order.subtotal || order.total || 0);
-    const discount = Number(order.discount || 0);
-    const total = Number(order.total || 0);
+
+    const issueDate =
+      order.issueDate
+        ? new Date(
+            order.issueDate
+          ).toLocaleDateString("es-AR")
+        : "";
+
+
+    const dueDate =
+      order.dueDate
+        ? new Date(
+            order.dueDate
+          ).toLocaleDateString("es-AR")
+        : "Sin vencimiento";
+
+
+    const legacySubtotal =
+      Number(
+        order.subtotal ||
+        order.total ||
+        0
+      );
+
 
     const legacyQuantity =
-      Number(order.quantity || order.hours || 1) || 1;
+      Number(
+        order.quantity ||
+        order.hours ||
+        1
+      ) || 1;
+
 
     const legacyUnitPrice =
       Number(order.rate || 0) ||
-      (legacyQuantity > 0
-        ? subtotal / legacyQuantity
-        : subtotal);
+      (
+        legacyQuantity > 0
+          ? legacySubtotal /
+            legacyQuantity
+          : legacySubtotal
+      );
+
 
     const displayItems: OrderItemData[] =
-      order.items && order.items.length > 0
+      order.items &&
+      order.items.length > 0
         ? order.items
         : [
             {
               description:
-                order.description || "Servicio",
-              detail: order.detail || "",
-              quantity: legacyQuantity,
-              unitPrice: legacyUnitPrice,
-              total: subtotal,
+                order.description ||
+                "Servicio",
+
+              detail:
+                order.detail || "",
+
+              billingMode:
+                Number(
+                  order.hours || 0
+                ) > 0
+                  ? "HOURS"
+                  : "SERVICE",
+
+              quantity:
+                legacyQuantity,
+
+              unitPrice:
+                legacyUnitPrice,
+
+              discountType:
+                order.discountType ||
+                "FIXED",
+
+              discountValue:
+                order.discountValue ||
+                0,
+
+              discountAmount:
+                order.discount ||
+                0,
+
+              total:
+                Number(
+                  order.total || 0
+                ),
             },
           ];
 
-    const hasClientNotes = Boolean(
-      order.clientNotes?.trim()
-    );
 
-    const rowHeight = 105;
-    const servicesHeight =
-      70 + displayItems.length * rowHeight;
+    const itemGross = (
+      item: OrderItemData
+    ) => {
+      const quantity =
+        item.billingMode === "SERVICE"
+          ? 1
+          : Number(
+              item.quantity || 0
+            );
+
+      return (
+        quantity *
+        Number(
+          item.unitPrice || 0
+        )
+      );
+    };
+
+
+    const grossSubtotal =
+      displayItems.reduce(
+        (sum, item) =>
+          sum + itemGross(item),
+        0
+      );
+
+
+    const totalDiscount =
+      displayItems.reduce(
+        (sum, item) =>
+          sum +
+          Number(
+            item.discountAmount || 0
+          ),
+        0
+      );
+
+
+    const total =
+      Number(
+        order.total || 0
+      );
+
+
+    const hasClientNotes =
+      Boolean(
+        order.clientNotes?.trim()
+      );
+
+
+    const rowHeight = 112;
 
     const servicesTop = 450;
+
+    const servicesHeight =
+      83 +
+      displayItems.length *
+        rowHeight;
+
+
     const afterServices =
-      servicesTop + servicesHeight + 35;
+      servicesTop +
+      servicesHeight +
+      30;
 
-    const summaryHeight =
-      hasClientNotes ? 250 : 205;
 
-    const bankTop =
-      afterServices + summaryHeight + 35;
+    const summaryHeight = 170;
 
-    const height = bankTop + 220;
+
+    const observationsHeight =
+      hasClientNotes
+        ? 155
+        : 0;
+
+
+    const observationsTop =
+      afterServices +
+      summaryHeight +
+      28;
+
+
+    const paymentTop =
+      observationsTop +
+      observationsHeight +
+      (
+        hasClientNotes
+          ? 28
+          : 0
+      );
+
+
+    const paymentHeight = 125;
+
+
+    const height =
+      paymentTop +
+      paymentHeight +
+      85;
+
 
     const canvas =
-      document.createElement("canvas");
+      document.createElement(
+        "canvas"
+      );
 
     canvas.width = 1080;
     canvas.height = height;
 
-    const context = canvas.getContext("2d");
+
+    const context =
+      canvas.getContext("2d");
+
 
     if (!context) {
       throw new Error(
@@ -1562,10 +1706,15 @@ export function PanelPage() {
       );
     }
 
-    const logo = await loadLogoImage();
+
+    const logo =
+      await loadLogoImage();
+
 
     // Fondo
-    context.fillStyle = "#f1f5f9";
+    context.fillStyle =
+      "#f1f5f9";
+
     context.fillRect(
       0,
       0,
@@ -1573,9 +1722,13 @@ export function PanelPage() {
       canvas.height
     );
 
+
     // Hoja
-    context.fillStyle = "#ffffff";
+    context.fillStyle =
+      "#ffffff";
+
     context.beginPath();
+
     context.roundRect(
       55,
       55,
@@ -1583,11 +1736,16 @@ export function PanelPage() {
       height - 110,
       34
     );
+
     context.fill();
 
-    // Línea superior
-    context.fillStyle = "#0f9f8f";
+
+    // Linea superior
+    context.fillStyle =
+      "#0f9f8f";
+
     context.beginPath();
+
     context.roundRect(
       55,
       55,
@@ -1595,7 +1753,9 @@ export function PanelPage() {
       14,
       8
     );
+
     context.fill();
+
 
     // Logo
     if (logo) {
@@ -1608,25 +1768,39 @@ export function PanelPage() {
       );
     }
 
-    context.fillStyle = "#0f766e";
-    context.font = "bold 25px Arial";
+
+    context.fillStyle =
+      "#0f766e";
+
+    context.font =
+      "bold 25px Arial";
+
     context.fillText(
       "FÉLIX CANCELADO",
       logo ? 205 : 95,
       135
     );
 
-    context.fillStyle = "#0f172a";
-    context.font = "bold 64px Arial";
+
+    context.fillStyle =
+      "#0f172a";
+
+    context.font =
+      "bold 64px Arial";
+
     context.fillText(
       "Orden",
       logo ? 205 : 95,
       205
     );
 
-    // Número y estado
-    context.fillStyle = "#f8fafc";
+
+    // Numero / estado
+    context.fillStyle =
+      "#f8fafc";
+
     context.beginPath();
+
     context.roundRect(
       810,
       95,
@@ -1634,38 +1808,74 @@ export function PanelPage() {
       125,
       24
     );
+
     context.fill();
 
-    context.fillStyle = "#0f172a";
-    context.font = "bold 38px Arial";
-    context.textAlign = "center";
+
+    context.fillStyle =
+      "#0f172a";
+
+    context.font =
+      "bold 38px Arial";
+
+    context.textAlign =
+      "center";
+
     context.fillText(
       `#${order.number}`,
       892,
       145
     );
 
-    context.fillStyle = "#991b1b";
-    context.font = "21px Arial";
+
+    context.fillStyle =
+      order.status === "PAID"
+        ? "#047857"
+        : "#991b1b";
+
+    context.font =
+      "21px Arial";
+
     context.fillText(
-      formatOrderStatus(order.status),
+      formatOrderStatus(
+        order.status
+      ),
       892,
       190
     );
 
-    context.textAlign = "left";
+
+    context.textAlign =
+      "left";
+
 
     // Separador
-    context.strokeStyle = "#e2e8f0";
+    context.strokeStyle =
+      "#e2e8f0";
+
     context.lineWidth = 2;
+
     context.beginPath();
-    context.moveTo(95, 260);
-    context.lineTo(985, 260);
+
+    context.moveTo(
+      95,
+      260
+    );
+
+    context.lineTo(
+      985,
+      260
+    );
+
     context.stroke();
 
-    // Cliente + fechas compactas
-    context.fillStyle = "#f8fafc";
+
+    // Cliente / fechas
+    context.fillStyle =
+      "#f8fafc";
+
     context.beginPath();
+
     context.roundRect(
       95,
       290,
@@ -1673,18 +1883,29 @@ export function PanelPage() {
       115,
       20
     );
+
     context.fill();
 
-    context.fillStyle = "#64748b";
-    context.font = "bold 18px Arial";
+
+    context.fillStyle =
+      "#64748b";
+
+    context.font =
+      "bold 18px Arial";
+
     context.fillText(
       "CLIENTE",
       125,
       325
     );
 
-    context.fillStyle = "#0f172a";
-    context.font = "bold 26px Arial";
+
+    context.fillStyle =
+      "#0f172a";
+
+    context.font =
+      "bold 26px Arial";
+
 
     formatCanvasText(
       context,
@@ -1696,8 +1917,13 @@ export function PanelPage() {
       1
     );
 
-    context.font = "17px Arial";
-    context.fillStyle = "#475569";
+
+    context.font =
+      "17px Arial";
+
+    context.fillStyle =
+      "#475569";
+
 
     const customerMeta = [
       order.contact?.email,
@@ -1705,6 +1931,7 @@ export function PanelPage() {
     ]
       .filter(Boolean)
       .join(" · ");
+
 
     formatCanvasText(
       context,
@@ -1716,16 +1943,26 @@ export function PanelPage() {
       1
     );
 
-    context.fillStyle = "#64748b";
-    context.font = "bold 18px Arial";
+
+    context.fillStyle =
+      "#64748b";
+
+    context.font =
+      "bold 18px Arial";
+
     context.fillText(
       "FECHAS",
       600,
       325
     );
 
-    context.fillStyle = "#0f172a";
-    context.font = "19px Arial";
+
+    context.fillStyle =
+      "#0f172a";
+
+    context.font =
+      "19px Arial";
+
     context.fillText(
       `Emisión: ${issueDate}`,
       600,
@@ -1738,20 +1975,33 @@ export function PanelPage() {
       390
     );
 
-    // Servicios
-    context.fillStyle = "#0f766e";
-    context.font = "bold 34px Arial";
+
+    // ============================================
+    // SERVICIOS
+    // ============================================
+
+    context.fillStyle =
+      "#0f766e";
+
+    context.font =
+      "bold 31px Arial";
+
     context.fillText(
       "Servicios",
       95,
       servicesTop
     );
 
+
     const tableTop =
       servicesTop + 35;
 
-    context.fillStyle = "#eaf3f7";
+
+    context.fillStyle =
+      "#e7f7f2";
+
     context.beginPath();
+
     context.roundRect(
       95,
       tableTop,
@@ -1759,299 +2009,622 @@ export function PanelPage() {
       48,
       12
     );
+
     context.fill();
 
-    context.fillStyle = "#334155";
-    context.font = "bold 18px Arial";
+
+    context.fillStyle =
+      "#0f5e55";
+
+    context.font =
+      "bold 16px Arial";
+
 
     context.fillText(
-      "Servicio",
-      120,
+      "Servicio / Descripción",
+      115,
       tableTop + 31
     );
 
-    context.textAlign = "right";
+
+    context.textAlign =
+      "right";
+
+
     context.fillText(
-      "Cant.",
-      650,
+      "Horas/Cant.",
+      590,
       tableTop + 31
     );
 
+
     context.fillText(
-      "Precio unit.",
-      800,
+      "Valor unit.",
+      735,
       tableTop + 31
     );
+
+
+    context.fillText(
+      "Descuento",
+      860,
+      tableTop + 31
+    );
+
 
     context.fillText(
       "Total",
-      955,
+      965,
       tableTop + 31
     );
 
-    context.textAlign = "left";
+
+    context.textAlign =
+      "left";
+
 
     let rowY =
       tableTop + 48;
 
-    displayItems.forEach((item) => {
-      context.strokeStyle = "#e2e8f0";
-      context.lineWidth = 1;
 
-      context.beginPath();
-      context.moveTo(110, rowY + rowHeight);
-      context.lineTo(970, rowY + rowHeight);
-      context.stroke();
+    displayItems.forEach(
+      (item) => {
 
-      context.fillStyle = "#0f172a";
-      context.font = "bold 21px Arial";
+        context.strokeStyle =
+          "#e2e8f0";
 
-      formatCanvasText(
-        context,
-        item.description || "Servicio",
-        120,
-        rowY + 35,
-        420,
-        25,
-        1
-      );
+        context.lineWidth = 1;
 
-      if (item.detail) {
-        context.fillStyle = "#64748b";
-        context.font = "16px Arial";
+        context.beginPath();
+
+        context.moveTo(
+          110,
+          rowY + rowHeight
+        );
+
+        context.lineTo(
+          970,
+          rowY + rowHeight
+        );
+
+        context.stroke();
+
+
+        context.fillStyle =
+          "#0f172a";
+
+        context.font =
+          "bold 20px Arial";
+
 
         formatCanvasText(
           context,
-          item.detail,
-          120,
-          rowY + 65,
-          420,
-          20,
-          2
+          item.description ||
+            "Servicio",
+          115,
+          rowY + 34,
+          350,
+          24,
+          1
         );
+
+
+        if (item.detail) {
+
+          context.fillStyle =
+            "#64748b";
+
+          context.font =
+            "15px Arial";
+
+
+          formatCanvasText(
+            context,
+            item.detail,
+            115,
+            rowY + 65,
+            350,
+            20,
+            2
+          );
+        }
+
+
+        const itemQuantity =
+          item.billingMode ===
+          "SERVICE"
+            ? 1
+            : Number(
+                item.quantity || 0
+              );
+
+
+        const itemDiscount =
+          Number(
+            item.discountAmount || 0
+          );
+
+
+        context.fillStyle =
+          "#0f172a";
+
+        context.font =
+          "18px Arial";
+
+        context.textAlign =
+          "right";
+
+
+        context.fillText(
+          String(itemQuantity),
+          590,
+          rowY + 46
+        );
+
+
+        context.fillText(
+          formatMoney(
+            Number(
+              item.unitPrice || 0
+            )
+          ),
+          735,
+          rowY + 46
+        );
+
+
+        if (itemDiscount > 0) {
+
+          context.fillStyle =
+            "#b42318";
+
+          context.font =
+            "bold 17px Arial";
+
+
+          context.fillText(
+            `- ${formatMoney(
+              itemDiscount
+            )}`,
+            860,
+            rowY + 42
+          );
+
+
+          if (
+            item.discountType ===
+            "PERCENT"
+          ) {
+
+            context.fillStyle =
+              "#64748b";
+
+            context.font =
+              "14px Arial";
+
+
+            context.fillText(
+              `${Number(
+                item.discountValue ||
+                  0
+              )}%`,
+              860,
+              rowY + 68
+            );
+          }
+
+        } else {
+
+          context.fillStyle =
+            "#94a3b8";
+
+          context.font =
+            "17px Arial";
+
+          context.fillText(
+            "—",
+            860,
+            rowY + 46
+          );
+        }
+
+
+        context.fillStyle =
+          "#0f172a";
+
+        context.font =
+          "bold 19px Arial";
+
+
+        context.fillText(
+          formatMoney(
+            Number(
+              item.total || 0
+            )
+          ),
+          965,
+          rowY + 46
+        );
+
+
+        context.textAlign =
+          "left";
+
+
+        rowY +=
+          rowHeight;
       }
+    );
 
-      context.fillStyle = "#0f172a";
-      context.font = "19px Arial";
-      context.textAlign = "right";
 
-      context.fillText(
-        String(Number(item.quantity || 0)),
-        650,
-        rowY + 45
-      );
+    // ============================================
+    // RESUMEN
+    // ============================================
 
-      context.fillText(
-        formatMoney(
-          Number(item.unitPrice || 0)
-        ),
-        800,
-        rowY + 45
-      );
-
-      context.font = "bold 20px Arial";
-
-      context.fillText(
-        formatMoney(
-          Number(item.total || 0)
-        ),
-        955,
-        rowY + 45
-      );
-
-      context.textAlign = "left";
-
-      rowY += rowHeight;
-    });
-
-    // Observaciones
     const summaryTop =
       afterServices;
 
+
+    context.fillStyle =
+      "#f8fafc";
+
+    context.beginPath();
+
+    context.roundRect(
+      565,
+      summaryTop,
+      420,
+      summaryHeight,
+      20
+    );
+
+    context.fill();
+
+
+    context.fillStyle =
+      "#334155";
+
+    context.font =
+      "17px Arial";
+
+
+    context.fillText(
+      "Subtotal de servicios",
+      595,
+      summaryTop + 40
+    );
+
+
+    context.textAlign =
+      "right";
+
+
+    context.fillText(
+      formatMoney(
+        grossSubtotal
+      ),
+      955,
+      summaryTop + 40
+    );
+
+
+    context.textAlign =
+      "left";
+
+
+    context.fillText(
+      "Descuentos",
+      595,
+      summaryTop + 74
+    );
+
+
+    context.fillStyle =
+      "#b42318";
+
+    context.textAlign =
+      "right";
+
+
+    context.fillText(
+      `- ${formatMoney(
+        totalDiscount
+      )}`,
+      955,
+      summaryTop + 74
+    );
+
+
+    // Total compacto
+    context.fillStyle =
+      "#d1fae5";
+
+    context.beginPath();
+
+    context.roundRect(
+      585,
+      summaryTop + 96,
+      380,
+      55,
+      14
+    );
+
+    context.fill();
+
+
+    context.fillStyle =
+      "#0f766e";
+
+    context.font =
+      "bold 18px Arial";
+
+    context.textAlign =
+      "left";
+
+
+    context.fillText(
+      "Cantidad a transferir",
+      605,
+      summaryTop + 130
+    );
+
+
+    context.fillStyle =
+      "#0f172a";
+
+    context.font =
+      "bold 23px Arial";
+
+    context.textAlign =
+      "right";
+
+
+    context.fillText(
+      formatMoney(total),
+      945,
+      summaryTop + 130
+    );
+
+
+    context.textAlign =
+      "left";
+
+
+    // ============================================
+    // OBSERVACIONES - ANTES DEL PAGO
+    // ============================================
+
     if (hasClientNotes) {
-      context.fillStyle = "#fff7ed";
+
+      context.fillStyle =
+        "#fff7ed";
+
       context.beginPath();
+
       context.roundRect(
         95,
-        summaryTop,
-        505,
-        summaryHeight,
-        22
+        observationsTop,
+        890,
+        observationsHeight,
+        18
       );
+
       context.fill();
 
-      context.fillStyle = "#9a3412";
-      context.font = "bold 21px Arial";
+
+      context.fillStyle =
+        "#9a3412";
+
+      context.font =
+        "bold 19px Arial";
+
       context.fillText(
         "OBSERVACIONES",
-        125,
-        summaryTop + 42
+        120,
+        observationsTop + 36
       );
 
-      context.fillStyle = "#334155";
-      context.font = "18px Arial";
+
+      context.fillStyle =
+        "#334155";
+
+      context.font =
+        "16px Arial";
+
 
       formatCanvasText(
         context,
         order.clientNotes || "",
-        125,
-        summaryTop + 82,
-        435,
-        26,
-        5
+        120,
+        observationsTop + 72,
+        820,
+        23,
+        4
       );
     }
 
-    // Resumen
-    const summaryX =
-      hasClientNotes ? 625 : 430;
 
-    const summaryWidth =
-      hasClientNotes ? 360 : 555;
+    // ============================================
+    // DETALLES DE PAGO - ULTIMO Y COMPACTO
+    // ============================================
 
-    context.fillStyle = "#f8fafc";
+    context.strokeStyle =
+      "#e2e8f0";
+
+    context.lineWidth = 1;
+
     context.beginPath();
-    context.roundRect(
-      summaryX,
-      summaryTop,
-      summaryWidth,
-      summaryHeight,
-      22
-    );
-    context.fill();
 
-    context.fillStyle = "#334155";
-    context.font = "bold 23px Arial";
-    context.fillText(
-      "RESUMEN",
-      summaryX + 28,
-      summaryTop + 42
+    context.moveTo(
+      95,
+      paymentTop
     );
 
-    context.font = "19px Arial";
-    context.fillStyle = "#0f172a";
-
-    context.fillText(
-      "Subtotal",
-      summaryX + 28,
-      summaryTop + 86
+    context.lineTo(
+      985,
+      paymentTop
     );
 
-    context.textAlign = "right";
-
-    context.fillText(
-      formatMoney(subtotal),
-      summaryX + summaryWidth - 28,
-      summaryTop + 86
-    );
-
-    context.textAlign = "left";
-
-    const discountLabel =
-      order.discountType === "PERCENT"
-        ? `Descuento ${Number(
-            order.discountValue || 0
-          )}%`
-        : "Descuento";
-
-    context.fillText(
-      discountLabel,
-      summaryX + 28,
-      summaryTop + 124
-    );
-
-    context.fillStyle = "#059669";
-    context.textAlign = "right";
-
-    context.fillText(
-      `- ${formatMoney(discount)}`,
-      summaryX + summaryWidth - 28,
-      summaryTop + 124
-    );
-
-    context.textAlign = "left";
-
-    // Total destacado
-    context.fillStyle = "#d1fae5";
-    context.beginPath();
-    context.roundRect(
-      summaryX + 18,
-      summaryTop + 145,
-      summaryWidth - 36,
-      72,
-      18
-    );
-    context.fill();
-
-    context.fillStyle = "#0f766e";
-    context.font = "bold 25px Arial";
-    context.fillText(
-      "Total",
-      summaryX + 35,
-      summaryTop + 191
-    );
-
-    context.fillStyle = "#0f172a";
-    context.font = "bold 31px Arial";
-    context.textAlign = "right";
-
-    context.fillText(
-      formatMoney(total),
-      summaryX + summaryWidth - 35,
-      summaryTop + 192
-    );
-
-    context.textAlign = "left";
-
-    // Datos bancarios compactos
-    context.strokeStyle = "#e2e8f0";
-    context.beginPath();
-    context.moveTo(95, bankTop);
-    context.lineTo(985, bankTop);
     context.stroke();
 
-    context.fillStyle = "#0f766e";
-    context.font = "bold 21px Arial";
+
+    context.fillStyle =
+      "#0f766e";
+
+    context.font =
+      "bold 18px Arial";
+
+    context.fillText(
+      "Detalles de pago",
+      105,
+      paymentTop + 38
+    );
+
+
+    context.fillStyle =
+      "#334155";
+
+    context.font =
+      "bold 15px Arial";
+
     context.fillText(
       payment.label,
       105,
-      bankTop + 50
+      paymentTop + 70
     );
+
 
     const paymentText =
       payment.lines.join(" · ");
 
-    context.fillStyle = "#334155";
-    context.font = "16px Arial";
+
+    context.fillStyle =
+      "#475569";
+
+    context.font =
+      "14px Arial";
+
 
     formatCanvasText(
       context,
       paymentText,
-      330,
-      bankTop + 40,
-      625,
-      22,
-      3
+      280,
+      paymentTop + 68,
+      675,
+      20,
+      2
     );
+
 
     return canvas;
   }
 
-  async function downloadOrderPdf(order: Order) {
+
+  async function buildOrderPdfBlob(
+    order: Order
+  ) {
+    const canvas =
+      await buildOrderCanvas(order);
+
+    const imageData =
+      canvas.toDataURL(
+        "image/png"
+      );
+
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: [
+        canvas.width,
+        canvas.height,
+      ],
+    });
+
+
+    pdf.addImage(
+      imageData,
+      "PNG",
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+
+    return pdf.output("blob");
+  }
+
+
+  async function buildOrderPdfFile(
+    order: Order
+  ) {
+    const blob =
+      await buildOrderPdfBlob(
+        order
+      );
+
+
+    return new File(
+      [blob],
+      `orden-${order.number}.pdf`,
+      {
+        type:
+          "application/pdf",
+      }
+    );
+  }
+
+
+  async function downloadOrderPdf(
+    order: Order
+  ) {
     try {
-      const canvas = await buildOrderCanvas(order);
-      const imageData = canvas.toDataURL("image/png");
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [canvas.width, canvas.height],
-      });
+      const blob =
+        await buildOrderPdfBlob(
+          order
+        );
 
-      pdf.addImage(imageData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(`orden-${order.number}.pdf`);
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+
+      link.href = url;
+
+      link.download =
+        `orden-${order.number}.pdf`;
+
+
+      document.body.appendChild(
+        link
+      );
+
+      link.click();
+
+      link.remove();
+
+
+      URL.revokeObjectURL(
+        url
+      );
+
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo descargar el PDF.");
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo descargar el PDF."
+      );
     }
   }
 
@@ -2188,50 +2761,104 @@ export function PanelPage() {
 
     setIsLoading(false);
   }
-  async function prepareEmailOrder(order: Order, mode: "send" | "resend") {
+  async function prepareEmailOrder(
+    order: Order,
+    mode: "send" | "resend"
+  ) {
     if (!order.contact?.email) {
-      setMessage(`La orden #${order.number} no tiene un email de contacto.`);
+      setMessage(
+        `La orden #${order.number} no tiene un email de contacto.`
+      );
+
       return;
     }
+
 
     setMessage("");
     setIsLoading(true);
 
+
     try {
-      const response = await apiFetch(`/api/panel/orders/${order.id}/send`, {
-        method: "POST",
-        body: JSON.stringify({
-          type: mode === "send" ? "INITIAL" : "RESEND",
-        }),
-      });
 
-      const data = (await response.json()) as {
-        ok: boolean;
-        emailTo: string;
-        includedLegalDocument: boolean;
-      };
+      // 1. Generar exactamente el mismo PDF
+      // que se descarga desde la app.
+      const pdfFile =
+        await buildOrderPdfFile(
+          order
+        );
 
-      const action = mode === "send" ? "enviada" : "reenviada";
 
-      setMessage(
-        `Orden #${order.number} ${action} a ${data.emailTo}${
-          data.includedLegalDocument ? " con PDF adjunto." : " sin PDF adjunto."
-        }`
+      // 2. Guardarlo/reemplazarlo en la orden.
+      await uploadOrderDocument(
+        order.id,
+        pdfFile
       );
 
-      await loadOrders();
-      await loadPendingOrders();
+
+      // 3. Enviar email. El backend toma
+      // el PDF que acabamos de guardar.
+      const response =
+        await apiFetch(
+          `/api/panel/orders/${order.id}/send`,
+          {
+            method: "POST",
+
+            body: JSON.stringify({
+              type:
+                mode === "send"
+                  ? "INITIAL"
+                  : "RESEND",
+            }),
+          }
+        );
+
+
+      const data =
+        (await response.json()) as {
+          ok: boolean;
+          emailTo: string;
+          includedLegalDocument: boolean;
+        };
+
+
+      if (
+        !data.includedLegalDocument
+      ) {
+        throw new Error(
+          "El email se proceso, pero el PDF no quedo incluido."
+        );
+      }
+
+
+      const action =
+        mode === "send"
+          ? "enviada"
+          : "reenviada";
+
+
+      setMessage(
+        `Orden #${order.number} ${action} a ${data.emailTo} con PDF actualizado adjunto.`
+      );
+
+
+      await Promise.all([
+        loadOrders(),
+        loadPendingOrders(),
+      ]);
+
     } catch (error) {
+
       setMessage(
         error instanceof Error
           ? error.message
-          : "No se pudo enviar la orden por email."
+          : "No se pudo generar o enviar la orden por email."
       );
+
     } finally {
+
       setIsLoading(false);
     }
   }
-
 
   function handleLogout() {
     localStorage.removeItem("orders_panel_token");
