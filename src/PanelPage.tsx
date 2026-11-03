@@ -2033,21 +2033,21 @@ export function PanelPage() {
 
     context.fillText(
       "Horas/Cant.",
-      590,
+      555,
       tableTop + 31
     );
 
 
     context.fillText(
       "Valor unit.",
-      735,
+      700,
       tableTop + 31
     );
 
 
     context.fillText(
       "Descuento",
-      860,
+      835,
       tableTop + 31
     );
 
@@ -2103,7 +2103,7 @@ export function PanelPage() {
             "Servicio",
           115,
           rowY + 34,
-          350,
+          400,
           24,
           1
         );
@@ -2123,7 +2123,7 @@ export function PanelPage() {
             item.detail,
             115,
             rowY + 65,
-            350,
+            400,
             20,
             2
           );
@@ -2157,7 +2157,7 @@ export function PanelPage() {
 
         context.fillText(
           String(itemQuantity),
-          590,
+          555,
           rowY + 46
         );
 
@@ -2168,7 +2168,7 @@ export function PanelPage() {
               item.unitPrice || 0
             )
           ),
-          735,
+          700,
           rowY + 46
         );
 
@@ -2186,7 +2186,7 @@ export function PanelPage() {
             `- ${formatMoney(
               itemDiscount
             )}`,
-            860,
+            835,
             rowY + 42
           );
 
@@ -2208,7 +2208,7 @@ export function PanelPage() {
                 item.discountValue ||
                   0
               )}%`,
-              860,
+              835,
               rowY + 68
             );
           }
@@ -2223,7 +2223,7 @@ export function PanelPage() {
 
           context.fillText(
             "—",
-            860,
+            835,
             rowY + 46
           );
         }
