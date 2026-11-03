@@ -94,7 +94,7 @@ type PanelSection = "dashboard" | "contacts" | "orders" | "pending";
 type ContactView = "create" | "list" | "edit";
 type OrderView = "create" | "list";
 type DiscountType = "FIXED" | "PERCENT";
-type PaymentRegion = "argentina" | "colombia" | "world";
+type PaymentRegion = "argentina" | "colombia" | "taptap" | "paypal";
 type DashboardView = "aggregate" | "monthly";
 
 const API_BASE_URL = import.meta.env.VITE_ORDERS_API_URL || "";
@@ -137,7 +137,7 @@ function formatOrderStatus(status: string) {
 function getPaymentDetailsByRegion(region: PaymentRegion) {
   if (region === "argentina") {
     return {
-      label: "Argentina · BBVA",
+      label: "Argentina \u00b7 BBVA",
       lines: [
         "Alias: PROFE.FELIX.CANCELAD",
         "CBU: 0170006040000005422924",
@@ -149,13 +149,24 @@ function getPaymentDetailsByRegion(region: PaymentRegion) {
 
   if (region === "colombia") {
     return {
-      label: "Colombia · Llave Nu",
-      lines: ["Llave Nu: @FCJ615"],
+      label: "Colombia \u00b7 Llave Nu",
+      lines: [
+        "Llave Nu: @FCJ615",
+      ],
+    };
+  }
+
+  if (region === "paypal") {
+    return {
+      label: "Exterior \u00b7 PayPal",
+      lines: [
+        "PayPal: felixcancelado@gmail.com",
+      ],
     };
   }
 
   return {
-    label: "Exterior · Tap Tap",
+    label: "Exterior \u00b7 Tap Tap",
     lines: [
       "Banco: BBVA",
       "Cuenta: 0170006040000005422924",
@@ -164,12 +175,16 @@ function getPaymentDetailsByRegion(region: PaymentRegion) {
   };
 }
 
-function guessPaymentRegion(country?: string | null): PaymentRegion {
-  const normalizedCountry = (country || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
+
+function guessPaymentRegion(
+  country?: string | null
+): PaymentRegion {
+  const normalizedCountry =
+    (country || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
 
   if (normalizedCountry.includes("argentina")) {
     return "argentina";
@@ -179,15 +194,85 @@ function guessPaymentRegion(country?: string | null): PaymentRegion {
     return "colombia";
   }
 
-  return "world";
+  return "taptap";
 }
 
 
+function getStoredPaymentRegion(
+  internalNotes?: string | null,
+  country?: string | null
+): PaymentRegion {
+  const notes = internalNotes || "";
+
+  const paymentLines =
+    notes
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) =>
+        line.startsWith("Pago:")
+      );
+
+  const lastPayment =
+    paymentLines.length > 0
+      ? paymentLines[paymentLines.length - 1]
+      : "";
+
+  if (lastPayment.includes("Argentina")) {
+    return "argentina";
+  }
+
+  if (lastPayment.includes("Colombia")) {
+    return "colombia";
+  }
+
+  if (lastPayment.includes("Tap Tap")) {
+    return "taptap";
+  }
+
+  if (lastPayment.includes("PayPal")) {
+    return "paypal";
+  }
+
+  if (
+    notes.includes("Resto del mundo") &&
+    notes.includes("PayPal")
+  ) {
+    return "paypal";
+  }
+
+  return guessPaymentRegion(country);
+}
 
 
+function stripStoredPaymentNotes(
+  notes?: string | null
+) {
+  const patterns = [
+    /^Pago:/,
+    /^Alias: PROFE\.FELIX\.CANCELAD$/,
+    /^CBU: 0170006040000005422924$/,
+    /^Cuenta: 6-54229\/2$/,
+    /^Tipo: Caja de Ahorros$/,
+    /^Llave Nu: @FCJ615$/,
+    /^Banco: BBVA$/,
+    /^Cuenta: 0170006040000005422924$/,
+    /^Nombre: Felix Cancelado$/,
+    /^PayPal: felixcancelado@gmail\.com$/,
+  ];
 
+  return (notes || "")
+    .split(/\r?\n/)
+    .filter((line) => {
+      const trimmed = line.trim();
 
-
+      return !patterns.some(
+        (pattern) =>
+          pattern.test(trimmed)
+      );
+    })
+    .join("\n")
+    .trim();
+}
 
 
 export function PanelPage() {
@@ -1022,8 +1107,9 @@ export function PanelPage() {
 
 
     setPaymentRegion(
-      guessPaymentRegion(
-        order.contact?.country || ""
+      getStoredPaymentRegion(
+        order.internalNotes,
+        order.contact?.country
       )
     );
 
@@ -1146,7 +1232,7 @@ export function PanelPage() {
                 itemsPayload,
 
               internalNotes: [
-                orderForm.internalNotes.trim(),
+                stripStoredPaymentNotes(orderForm.internalNotes),
                 `Pago: ${selectedPaymentDetails.label}`,
                 ...selectedPaymentDetails.lines,
               ]
@@ -1313,7 +1399,7 @@ export function PanelPage() {
               itemsPayload,
 
             internalNotes: [
-              orderForm.internalNotes.trim(),
+              stripStoredPaymentNotes(orderForm.internalNotes),
               `Pago: ${selectedPaymentDetails.label}`,
               ...selectedPaymentDetails.lines,
             ]
@@ -1431,8 +1517,15 @@ export function PanelPage() {
 
 
   function getOrderPaymentDetails(order: Order) {
-    const region = guessPaymentRegion(order.contact?.country || "");
-    return getPaymentDetailsByRegion(region);
+    const region =
+      getStoredPaymentRegion(
+        order.internalNotes,
+        order.contact?.country
+      );
+
+    return getPaymentDetailsByRegion(
+      region
+    );
   }
 
   function getOrderCustomerName(order: Order) {
@@ -3398,7 +3491,8 @@ export function PanelPage() {
                         >
                           <option value="argentina">Argentina · BBVA</option>
                           <option value="colombia">Colombia · Llave Nu</option>
-                          <option value="world">Resto del mundo · PayPal</option>
+                          <option value="taptap">Exterior · Tap Tap</option>
+                          <option value="paypal">Exterior · PayPal</option>
                         </select>
                       </label>
 
