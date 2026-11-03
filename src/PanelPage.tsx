@@ -155,8 +155,12 @@ function getPaymentDetailsByRegion(region: PaymentRegion) {
   }
 
   return {
-    label: "Resto del mundo · PayPal",
-    lines: ["PayPal: felixcancelado@gmail.com"],
+    label: "Exterior · Tap Tap",
+    lines: [
+      "Banco: BBVA",
+      "Cuenta: 0170006040000005422924",
+      "Nombre: Felix Cancelado",
+    ],
   };
 }
 
