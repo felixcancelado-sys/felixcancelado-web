@@ -25,20 +25,36 @@ type Contact = {
 
 type OrderItemData = {
   id?: string;
+
   description: string;
   detail?: string | null;
+
+  billingMode?: "HOURS" | "SERVICE";
+
   quantity: string | number;
   unitPrice: string | number;
+
+  discountType?: DiscountType;
+  discountValue?: string | number;
+  discountAmount?: string | number;
+
   total: string | number;
   position?: number;
 };
 
-type AdditionalOrderItem = {
+type OrderFormItem = {
   key: string;
+
   description: string;
   detail: string;
+
+  billingMode: "HOURS" | "SERVICE";
+
   quantity: string;
   unitPrice: string;
+
+  discountType: DiscountType;
+  discountValue: string;
 };
 type Order = {
   id: string;
@@ -77,7 +93,6 @@ type Order = {
 type PanelSection = "dashboard" | "contacts" | "orders" | "pending";
 type ContactView = "create" | "list" | "edit";
 type OrderView = "create" | "list";
-type BillingMode = "hours" | "service";
 type DiscountType = "FIXED" | "PERCENT";
 type PaymentRegion = "argentina" | "colombia" | "world";
 type DashboardView = "aggregate" | "monthly";
@@ -219,10 +234,20 @@ export function PanelPage() {
     internalNotes: "",
   });
 
-  const [additionalItems, setAdditionalItems] = useState<AdditionalOrderItem[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderFormItem[]>([
+    {
+      key: "item-1",
+      description: "",
+      detail: "",
+      billingMode: "HOURS",
+      quantity: "",
+      unitPrice: "",
+      discountType: "FIXED",
+      discountValue: "0",
+    },
+  ]);
 
   const [orderDocument, setOrderDocument] = useState<File | null>(null);
-  const [billingMode, setBillingMode] = useState<BillingMode>("hours");
   const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>("argentina");
   const [contactSearch, setContactSearch] = useState("");
   const [orderContactSearch, setOrderContactSearch] = useState("");
@@ -232,39 +257,77 @@ export function PanelPage() {
 
   const isConfigured = useMemo(() => API_BASE_URL.length > 0, []);
 
-  const mainServiceSubtotal = useMemo(() => {
-    if (billingMode === "service") {
-      return optionalNumber(orderForm.serviceTotal) || 0;
+  function getItemAmounts(item: OrderFormItem) {
+    const quantity =
+      item.billingMode === "SERVICE"
+        ? 1
+        : optionalNumber(item.quantity) || 0;
+
+    const unitPrice =
+      optionalNumber(item.unitPrice) || 0;
+
+    const gross =
+      quantity * unitPrice;
+
+    const discountValue =
+      optionalNumber(item.discountValue) || 0;
+
+    let discountAmount = 0;
+
+    if (item.discountType === "PERCENT") {
+      const percent = Math.min(
+        Math.max(discountValue, 0),
+        100
+      );
+
+      discountAmount =
+        gross * (percent / 100);
+    } else {
+      discountAmount =
+        Math.max(discountValue, 0);
     }
 
-    const hours = optionalNumber(orderForm.hours) || 0;
-    const rate = optionalNumber(orderForm.rate) || 0;
-    return hours * rate;
-  }, [billingMode, orderForm.hours, orderForm.rate, orderForm.serviceTotal]);
+    discountAmount =
+      Math.min(discountAmount, gross);
 
-  const additionalItemsSubtotal = useMemo(() => {
-    return additionalItems.reduce((sum, item) => {
-      const quantity = optionalNumber(item.quantity) || 0;
-      const unitPrice = optionalNumber(item.unitPrice) || 0;
-      return sum + quantity * unitPrice;
-    }, 0);
-  }, [additionalItems]);
+    const total =
+      Math.max(
+        gross - discountAmount,
+        0
+      );
 
-  const estimatedSubtotal =
-    mainServiceSubtotal + additionalItemsSubtotal;
+    return {
+      quantity,
+      unitPrice,
+      gross,
+      discountAmount,
+      total,
+    };
+  }
+
 
   const estimatedDiscount = useMemo(() => {
-    const value = optionalNumber(orderForm.discount) || 0;
+    return orderItems.reduce(
+      (sum, item) =>
+        sum +
+        getItemAmounts(item).discountAmount,
+      0
+    );
+  }, [orderItems]);
 
-    if (orderForm.discountType === "PERCENT") {
-      const percent = Math.min(Math.max(value, 0), 100);
-      return estimatedSubtotal * (percent / 100);
-    }
 
-    return Math.max(value, 0);
-  }, [estimatedSubtotal, orderForm.discount, orderForm.discountType]);
+  const estimatedSubtotal = useMemo(() => {
+    return orderItems.reduce(
+      (sum, item) =>
+        sum +
+        getItemAmounts(item).total,
+      0
+    );
+  }, [orderItems]);
 
-  const estimatedTotal = Math.max(estimatedSubtotal - estimatedDiscount, 0);
+
+  const estimatedTotal =
+    estimatedSubtotal;
 
   const monthlyDashboard = useMemo<DashboardData>(() => {
     const monthOrders = orders.filter((order) => {
@@ -644,6 +707,20 @@ export function PanelPage() {
       setIsLoading(false);
     }
   }
+  function createEmptyOrderItem(): OrderFormItem {
+    return {
+      key: `${Date.now()}-${Math.random()}`,
+      description: "",
+      detail: "",
+      billingMode: "HOURS",
+      quantity: "",
+      unitPrice: "",
+      discountType: "FIXED",
+      discountValue: "0",
+    };
+  }
+
+
   function resetOrderForm() {
     setOrderForm({
       contactId: "",
@@ -660,33 +737,31 @@ export function PanelPage() {
       internalNotes: "",
     });
 
+    setOrderItems([
+      createEmptyOrderItem(),
+    ]);
+
     setOrderDocument(null);
-    setBillingMode("hours");
     setPaymentRegion("argentina");
     setOrderContactSearch("");
     setEditingOrderId(null);
   }
 
 
-  function addAdditionalItem() {
-    setAdditionalItems((current) => [
+  function addOrderItem() {
+    setOrderItems((current) => [
       ...current,
-      {
-        key: `${Date.now()}-${Math.random()}`,
-        description: "",
-        detail: "",
-        quantity: "1",
-        unitPrice: "",
-      },
+      createEmptyOrderItem(),
     ]);
   }
 
-  function updateAdditionalItem(
+
+  function updateOrderItem(
     key: string,
-    field: "description" | "detail" | "quantity" | "unitPrice",
+    field: keyof Omit<OrderFormItem, "key">,
     value: string
   ) {
-    setAdditionalItems((current) =>
+    setOrderItems((current) =>
       current.map((item) =>
         item.key === key
           ? {
@@ -698,118 +773,249 @@ export function PanelPage() {
     );
   }
 
-  function removeAdditionalItem(key: string) {
-    setAdditionalItems((current) =>
-      current.filter((item) => item.key !== key)
+
+  function removeOrderItem(key: string) {
+    setOrderItems((current) => {
+      if (current.length <= 1) {
+        return current;
+      }
+
+      return current.filter(
+        (item) =>
+          item.key !== key
+      );
+    });
+  }
+
+
+  function validateOrderItems() {
+    if (orderItems.length === 0) {
+      throw new Error(
+        "La orden debe tener al menos un servicio."
+      );
+    }
+
+    orderItems.forEach(
+      (item, index) => {
+        const amounts =
+          getItemAmounts(item);
+
+        if (!item.description.trim()) {
+          throw new Error(
+            `Completa la descripción del servicio ${index + 1}.`
+          );
+        }
+
+        if (
+          item.billingMode === "HOURS" &&
+          amounts.quantity <= 0
+        ) {
+          throw new Error(
+            `Completa las horas del servicio ${index + 1}.`
+          );
+        }
+
+        if (amounts.unitPrice <= 0) {
+          throw new Error(
+            `Completa el valor del servicio ${index + 1}.`
+          );
+        }
+
+        if (amounts.total <= 0) {
+          throw new Error(
+            `El total del servicio ${index + 1} debe ser mayor a cero.`
+          );
+        }
+      }
     );
   }
 
-  function validateAdditionalItems() {
-    const invalidItem = additionalItems.find((item) => {
-      const quantity = optionalNumber(item.quantity) || 0;
-      const unitPrice = optionalNumber(item.unitPrice);
-
-      return (
-        !item.description.trim() ||
-        quantity <= 0 ||
-        unitPrice === undefined ||
-        unitPrice < 0
-      );
-    });
-
-    if (invalidItem) {
-      throw new Error(
-        "Completa descripción, cantidad y precio de todos los servicios adicionales."
-      );
-    }
-  }
 
   function buildOrderItemsPayload() {
-    const mainQuantity =
-      billingMode === "hours"
-        ? optionalNumber(orderForm.hours) || 0
-        : 1;
-
-    const mainUnitPrice =
-      billingMode === "hours"
-        ? optionalNumber(orderForm.rate) || 0
-        : optionalNumber(orderForm.serviceTotal) || 0;
-
-    return [
-      {
-        description: orderForm.description.trim(),
-        detail: orderForm.detail.trim() || undefined,
-        quantity: mainQuantity,
-        unitPrice: mainUnitPrice,
-        total: mainServiceSubtotal,
-      },
-      ...additionalItems.map((item) => {
-        const quantity = optionalNumber(item.quantity) || 0;
-        const unitPrice = optionalNumber(item.unitPrice) || 0;
+    return orderItems.map(
+      (item) => {
+        const amounts =
+          getItemAmounts(item);
 
         return {
-          description: item.description.trim(),
-          detail: item.detail.trim() || undefined,
-          quantity,
-          unitPrice,
-          total: quantity * unitPrice,
+          description:
+            item.description.trim(),
+
+          detail:
+            item.detail.trim() ||
+            undefined,
+
+          billingMode:
+            item.billingMode,
+
+          quantity:
+            amounts.quantity,
+
+          unitPrice:
+            amounts.unitPrice,
+
+          discountType:
+            item.discountType,
+
+          discountValue:
+            optionalNumber(
+              item.discountValue
+            ) || 0,
+
+          discountAmount:
+            amounts.discountAmount,
+
+          total:
+            amounts.total,
         };
-      }),
-    ];
+      }
+    );
   }
+
+
   function beginEditOrder(order: Order) {
-    const hasHours =
-      Number(order.hours || 0) > 0 &&
-      Number(order.rate || 0) > 0;
-
     setEditingOrderId(order.id);
-    const storedOrderItems = order.items || [];
 
-    setAdditionalItems(
-      storedOrderItems.length > 1
-        ? storedOrderItems.slice(1).map((item, index) => ({
+    const storedItems =
+      order.items || [];
+
+    if (storedItems.length > 0) {
+
+      setOrderItems(
+        storedItems.map(
+          (item, index) => ({
             key:
               item.id ||
               `existing-${order.id}-${index}`,
-            description: item.description || "",
-            detail: item.detail || "",
-            quantity: String(item.quantity ?? 1),
-            unitPrice: String(item.unitPrice ?? ""),
-          }))
-        : []
-    );
+
+            description:
+              item.description || "",
+
+            detail:
+              item.detail || "",
+
+            billingMode:
+              item.billingMode === "SERVICE"
+                ? "SERVICE"
+                : "HOURS",
+
+            quantity:
+              String(
+                item.quantity ?? 1
+              ),
+
+            unitPrice:
+              String(
+                item.unitPrice ?? ""
+              ),
+
+            discountType:
+              item.discountType === "PERCENT"
+                ? "PERCENT"
+                : "FIXED",
+
+            discountValue:
+              String(
+                item.discountValue ?? 0
+              ),
+          })
+        )
+      );
+
+    } else {
+
+      const legacyHours =
+        Number(order.hours || 0);
+
+      const legacyRate =
+        Number(order.rate || 0);
+
+      const isHours =
+        legacyHours > 0 &&
+        legacyRate > 0;
+
+      setOrderItems([
+        {
+          key:
+            `legacy-${order.id}`,
+
+          description:
+            order.description || "",
+
+          detail:
+            order.detail || "",
+
+          billingMode:
+            isHours
+              ? "HOURS"
+              : "SERVICE",
+
+          quantity:
+            String(
+              isHours
+                ? legacyHours
+                : 1
+            ),
+
+          unitPrice:
+            String(
+              isHours
+                ? legacyRate
+                : order.subtotal ??
+                  order.total ??
+                  ""
+            ),
+
+          discountType:
+            order.discountType === "PERCENT"
+              ? "PERCENT"
+              : "FIXED",
+
+          discountValue:
+            String(
+              Number(
+                order.discountValue || 0
+              ) > 0
+                ? order.discountValue
+                : order.discount || 0
+            ),
+        },
+      ]);
+    }
 
 
     setOrderForm({
-      contactId: order.contactId,
-      dueDate: order.dueDate
-        ? order.dueDate.slice(0, 10)
-        : "",
-      status: order.status,
-      description: order.description || "",
-      detail: order.detail || "",
-      hours: hasHours
-        ? String(order.hours ?? "")
-        : "",
-      rate: hasHours
-        ? String(order.rate ?? "")
-        : "",
-      serviceTotal: hasHours
-        ? ""
-        : String(order.subtotal ?? order.total ?? ""),
-      discount: String(
-        Number(order.discountValue || 0) > 0
-          ? order.discountValue
-          : order.discount ?? 0
-      ),
-      discountType: order.discountType || "FIXED",
-      clientNotes: order.clientNotes || "",
-      internalNotes: order.internalNotes || "",
+      contactId:
+        order.contactId,
+
+      dueDate:
+        order.dueDate
+          ? order.dueDate.slice(0, 10)
+          : "",
+
+      status:
+        order.status,
+
+      description:
+        order.description || "",
+
+      detail:
+        order.detail || "",
+
+      hours: "",
+      rate: "",
+      serviceTotal: "",
+
+      discount: "0",
+      discountType: "FIXED",
+
+      clientNotes:
+        order.clientNotes || "",
+
+      internalNotes:
+        order.internalNotes || "",
     });
 
-    setBillingMode(
-      hasHours ? "hours" : "service"
-    );
 
     setPaymentRegion(
       guessPaymentRegion(
@@ -843,95 +1049,156 @@ export function PanelPage() {
     }, 0);
   }
 
-
   async function handleCreateOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setMessage("");
     setIsLoading(true);
 
     try {
+
       if (!orderForm.contactId) {
-        throw new Error("Selecciona un contacto.");
+        throw new Error(
+          "Selecciona un contacto."
+        );
       }
 
-      if (!orderForm.description.trim()) {
-        throw new Error("La descripcion es obligatoria.");
-      }
-
-      validateAdditionalItems();
+      validateOrderItems();
 
       if (estimatedTotal <= 0) {
-        throw new Error("La orden debe tener un total mayor a cero.");
+        throw new Error(
+          "La orden debe tener un total mayor a cero."
+        );
       }
 
-      const response = await apiFetch("/api/panel/orders", {
-        method: "POST",
-        body: JSON.stringify({
-          contactId: orderForm.contactId,
-          dueDate: orderForm.dueDate || undefined,
-          status: orderForm.status,
-          currency: "ARS",
-          description: orderForm.description.trim(),
-          detail: orderForm.detail.trim() || undefined,
-          hours: billingMode === "hours" ? optionalNumber(orderForm.hours) : undefined,
-          rate: billingMode === "hours" ? optionalNumber(orderForm.rate) : undefined,
-          quantity: billingMode === "hours" ? optionalNumber(orderForm.hours) : 1,
-          subtotal: estimatedSubtotal,
-          discount: estimatedDiscount,
-            discountType: orderForm.discountType,
-            discountValue: optionalNumber(orderForm.discount) || 0,
-          total: estimatedTotal,
-          clientNotes: orderForm.clientNotes.trim() || undefined,
-          items: buildOrderItemsPayload(),
-          internalNotes: [
-            orderForm.internalNotes.trim(),
-            `Tipo de cobro: ${billingMode === "hours" ? "Por horas" : "Servicio cerrado"}`,
-            `Pago: ${selectedPaymentDetails.label}`,
-            ...selectedPaymentDetails.lines,
-          ]
-            .filter(Boolean)
-            .join("\n"),
-        }),
-      });
+      const itemsPayload =
+        buildOrderItemsPayload();
 
-      const createdOrder = (await response.json()) as { id?: string };
+      const firstItem =
+        itemsPayload[0];
+
+
+      const response =
+        await apiFetch(
+          "/api/panel/orders",
+          {
+            method: "POST",
+
+            body: JSON.stringify({
+              contactId:
+                orderForm.contactId,
+
+              dueDate:
+                orderForm.dueDate ||
+                undefined,
+
+              status:
+                orderForm.status,
+
+              currency:
+                "ARS",
+
+              // Compatibilidad con órdenes viejas
+              description:
+                firstItem.description,
+
+              detail:
+                firstItem.detail,
+
+              hours:
+                firstItem.billingMode === "HOURS"
+                  ? firstItem.quantity
+                  : undefined,
+
+              rate:
+                firstItem.billingMode === "HOURS"
+                  ? firstItem.unitPrice
+                  : undefined,
+
+              quantity:
+                firstItem.quantity,
+
+              // El descuento ya vive en cada servicio.
+              subtotal:
+                estimatedSubtotal,
+
+              discount:
+                0,
+
+              discountType:
+                "FIXED",
+
+              discountValue:
+                0,
+
+              total:
+                estimatedTotal,
+
+              clientNotes:
+                orderForm.clientNotes.trim() ||
+                undefined,
+
+              items:
+                itemsPayload,
+
+              internalNotes: [
+                orderForm.internalNotes.trim(),
+                `Pago: ${selectedPaymentDetails.label}`,
+                ...selectedPaymentDetails.lines,
+              ]
+                .filter(Boolean)
+                .join("\n"),
+            }),
+          }
+        );
+
+
+      const createdOrder =
+        (await response.json()) as {
+          id?: string;
+        };
+
 
       if (orderDocument) {
         if (!createdOrder.id) {
-          throw new Error("La orden fue creada, pero no se pudo identificar para adjuntar el PDF.");
+          throw new Error(
+            "La orden fue creada, pero no se pudo identificar para adjuntar el PDF."
+          );
         }
 
-        await uploadOrderDocument(createdOrder.id, orderDocument);
+        await uploadOrderDocument(
+          createdOrder.id,
+          orderDocument
+        );
       }
 
-      setOrderForm({
-        contactId: "",
-        dueDate: "",
-        status: "DRAFT",
-        description: "",
-        detail: "",
-        hours: "",
-        rate: "",
-        serviceTotal: "",
-        discount: "0",
-        discountType: "FIXED" as DiscountType,
-        clientNotes: "",
-        internalNotes: "",
-      });
 
-      setAdditionalItems([]);
-      setOrderDocument(null);
-      setBillingMode("hours");
-      setPaymentRegion("argentina");
-      setOrderContactSearch("");
+      resetOrderForm();
 
-      await loadDashboard();
-      await loadOrders();
+      await Promise.all([
+        loadDashboard(),
+        loadOrders(),
+        loadPendingOrders(),
+      ]);
+
       setOrderView("list");
-      setMessage(orderDocument ? "Orden creada con PDF adjunto." : "Orden creada.");
+
+      setMessage(
+        orderDocument
+          ? "Orden creada con PDF adjunto."
+          : "Orden creada."
+      );
+
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Error al crear orden.");
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Error al crear orden."
+      );
+
     } finally {
+
       setIsLoading(false);
     }
   }
@@ -939,10 +1206,12 @@ export function PanelPage() {
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
+
     setMessage("");
     setIsLoading(true);
 
     try {
+
       if (!editingOrderId) {
         throw new Error(
           "No se pudo identificar la orden."
@@ -955,13 +1224,7 @@ export function PanelPage() {
         );
       }
 
-      if (!orderForm.description.trim()) {
-        throw new Error(
-          "La descripcion es obligatoria."
-        );
-      }
-
-      validateAdditionalItems();
+      validateOrderItems();
 
       if (estimatedTotal <= 0) {
         throw new Error(
@@ -969,66 +1232,93 @@ export function PanelPage() {
         );
       }
 
+
       const currentOrder =
         orders.find(
           (order) =>
             order.id === editingOrderId
         );
 
+
+      const itemsPayload =
+        buildOrderItemsPayload();
+
+      const firstItem =
+        itemsPayload[0];
+
+
       await apiFetch(
         `/api/panel/orders/${editingOrderId}`,
         {
           method: "PATCH",
+
           body: JSON.stringify({
-            contactId: orderForm.contactId,
+            contactId:
+              orderForm.contactId,
+
             dueDate:
-              orderForm.dueDate || null,
-            status: orderForm.status,
-            currency: "ARS",
+              orderForm.dueDate ||
+              null,
+
+            status:
+              orderForm.status,
+
+            currency:
+              "ARS",
+
             description:
-              orderForm.description.trim(),
+              firstItem.description,
+
             detail:
-              orderForm.detail.trim() || null,
+              firstItem.detail ||
+              null,
 
             hours:
-              billingMode === "hours"
-                ? optionalNumber(
-                    orderForm.hours
-                  ) ?? null
+              firstItem.billingMode === "HOURS"
+                ? firstItem.quantity
                 : null,
 
             rate:
-              billingMode === "hours"
-                ? optionalNumber(
-                    orderForm.rate
-                  ) ?? null
+              firstItem.billingMode === "HOURS"
+                ? firstItem.unitPrice
                 : null,
 
             quantity:
-              billingMode === "hours"
-                ? optionalNumber(
-                    orderForm.hours
-                  ) ?? null
-                : 1,
+              firstItem.quantity,
 
-            subtotal: estimatedSubtotal,
+            subtotal:
+              estimatedSubtotal,
 
-            discount: estimatedDiscount,
-            discountType: orderForm.discountType,
-            discountValue: optionalNumber(orderForm.discount) || 0,
+            discount:
+              0,
 
-            total: estimatedTotal,
+            discountType:
+              "FIXED",
+
+            discountValue:
+              0,
+
+            total:
+              estimatedTotal,
 
             clientNotes:
               orderForm.clientNotes.trim() ||
               null,
 
-            internalNotes:
-              orderForm.internalNotes.trim() ||
-              null,
+            items:
+              itemsPayload,
+
+            internalNotes: [
+              orderForm.internalNotes.trim(),
+              `Pago: ${selectedPaymentDetails.label}`,
+              ...selectedPaymentDetails.lines,
+            ]
+              .filter(Boolean)
+              .join("\n"),
           }),
         }
       );
+
 
       if (orderDocument) {
         await uploadOrderDocument(
@@ -1037,30 +1327,38 @@ export function PanelPage() {
         );
       }
 
+
       await Promise.all([
         loadDashboard(),
         loadOrders(),
         loadPendingOrders(),
       ]);
 
+
       const orderNumber =
         currentOrder?.number;
 
+
       resetOrderForm();
       setOrderView("list");
+
 
       setMessage(
         orderNumber
           ? `Orden #${orderNumber} actualizada correctamente.`
           : "Orden actualizada correctamente."
       );
+
     } catch (error) {
+
       setMessage(
         error instanceof Error
           ? error.message
           : "Error al actualizar la orden."
       );
+
     } finally {
+
       setIsLoading(false);
     }
   }
@@ -2526,158 +2824,95 @@ export function PanelPage() {
                       />
                     </label>
 
-                    <label className="panel-wide-field">
-                      Tipo de cobro
-                      <select
-                        value={billingMode}
-                        onChange={(event) =>
-                          setBillingMode(event.target.value as BillingMode)
-                        }
-                      >
-                        <option value="hours">Por horas</option>
-                        <option value="service">Servicio cerrado</option>
-                      </select>
-                    </label>
+                    <section className="panel-items-editor">
 
-                    <label className="panel-wide-field">
-                      Descripción *
-                      <input
-                        value={orderForm.description}
-                        placeholder="Ejemplo: Agosto"
-                        onChange={(event) =>
-                          setOrderForm((current) => ({
-                            ...current,
-                            description: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-
-                    <label className="panel-wide-field">
-                      Detalle
-                      <textarea
-                        value={orderForm.detail}
-                        placeholder="Ejemplo: 4, 11, 18, 25"
-                        onChange={(event) =>
-                          setOrderForm((current) => ({
-                            ...current,
-                            detail: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-
-                    {billingMode === "hours" ? (
-                      <>
-                        <label>
-                          Horas
-                          <input
-                            inputMode="decimal"
-                            value={orderForm.hours}
-                            placeholder="4"
-                            onChange={(event) =>
-                              setOrderForm((current) => ({
-                                ...current,
-                                hours: event.target.value,
-                              }))
-                            }
-                          />
-                        </label>
-
-                        <label>
-                          Valor hora
-                          <input
-                            inputMode="decimal"
-                            value={orderForm.rate}
-                            placeholder="22950"
-                            onChange={(event) =>
-                              setOrderForm((current) => ({
-                                ...current,
-                                rate: event.target.value,
-                              }))
-                            }
-                          />
-                        </label>
-                      </>
-                    ) : (
-                      <label className="panel-wide-field">
-                        Valor del servicio
-                        <input
-                          inputMode="decimal"
-                          value={orderForm.serviceTotal}
-                          placeholder="91800"
-                          onChange={(event) =>
-                            setOrderForm((current) => ({
-                              ...current,
-                              serviceTotal: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                    )}
-
-
-                    <section className="panel-additional-services">
-                      <div className="panel-additional-services-header">
+                      <div className="panel-items-editor-heading">
                         <div>
-                          <strong>Servicios / productos adicionales</strong>
+                          <strong>
+                            Servicios
+                          </strong>
+
                           <span>
-                            Agrega otros conceptos dentro de esta misma orden.
+                            Cada servicio tiene su propio tipo de cobro y descuento.
                           </span>
                         </div>
 
                         <button
                           type="button"
                           className="panel-add-service-button"
-                          onClick={addAdditionalItem}
+                          onClick={addOrderItem}
                         >
                           + Agregar servicio
                         </button>
                       </div>
 
-                      {additionalItems.length === 0 ? (
-                        <div className="panel-additional-empty">
-                          Esta orden tiene un solo servicio.
-                        </div>
-                      ) : (
-                        <div className="panel-additional-list">
-                          {additionalItems.map((item, index) => {
-                            const quantity =
-                              optionalNumber(item.quantity) || 0;
 
-                            const unitPrice =
-                              optionalNumber(item.unitPrice) || 0;
+                      <div className="panel-items-list">
 
-                            const itemTotal =
-                              quantity * unitPrice;
+                        {orderItems.map(
+                          (item, index) => {
+
+                            const amounts =
+                              getItemAmounts(item);
 
                             return (
-                              <div
-                                className="panel-additional-item"
+                              <article
                                 key={item.key}
+                                className="panel-service-card"
                               >
-                                <div className="panel-additional-item-header">
+
+                                <div className="panel-service-card-header">
                                   <strong>
-                                    Servicio {index + 2}
+                                    Servicio {index + 1}
                                   </strong>
 
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      removeAdditionalItem(item.key)
-                                    }
-                                  >
-                                    Eliminar
-                                  </button>
+                                  {orderItems.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removeOrderItem(
+                                          item.key
+                                        )
+                                      }
+                                    >
+                                      Eliminar
+                                    </button>
+                                  )}
                                 </div>
 
+
                                 <label className="panel-wide-field">
-                                  Descripción
+                                  Tipo de cobro
+
+                                  <select
+                                    value={item.billingMode}
+                                    onChange={(event) =>
+                                      updateOrderItem(
+                                        item.key,
+                                        "billingMode",
+                                        event.target.value
+                                      )
+                                    }
+                                  >
+                                    <option value="HOURS">
+                                      Por horas
+                                    </option>
+
+                                    <option value="SERVICE">
+                                      Servicio cerrado
+                                    </option>
+                                  </select>
+                                </label>
+
+
+                                <label className="panel-wide-field">
+                                  Descripción *
+
                                   <input
                                     value={item.description}
-                                    placeholder="Ej.: Clases de inglés - Roxana"
+                                    placeholder="Ej.: Inglés noviembre 2026"
                                     onChange={(event) =>
-                                      updateAdditionalItem(
+                                      updateOrderItem(
                                         item.key,
                                         "description",
                                         event.target.value
@@ -2686,13 +2921,15 @@ export function PanelPage() {
                                   />
                                 </label>
 
+
                                 <label className="panel-wide-field">
                                   Detalle
+
                                   <textarea
                                     value={item.detail}
-                                    placeholder="Ej.: Días 3, 6, 10, 13..."
+                                    placeholder="Ej.: Clases 4, 11, 18 y 25"
                                     onChange={(event) =>
-                                      updateAdditionalItem(
+                                      updateOrderItem(
                                         item.key,
                                         "detail",
                                         event.target.value
@@ -2701,31 +2938,54 @@ export function PanelPage() {
                                   />
                                 </label>
 
-                                <div className="panel-additional-numbers">
-                                  <label>
-                                    Cantidad
-                                    <input
-                                      inputMode="decimal"
-                                      value={item.quantity}
-                                      placeholder="1"
-                                      onChange={(event) =>
-                                        updateAdditionalItem(
-                                          item.key,
-                                          "quantity",
-                                          event.target.value
-                                        )
-                                      }
-                                    />
-                                  </label>
 
-                                  <label>
-                                    Precio unitario
+                                {item.billingMode === "HOURS" ? (
+                                  <>
+                                    <label>
+                                      Horas
+
+                                      <input
+                                        inputMode="decimal"
+                                        value={item.quantity}
+                                        placeholder="4"
+                                        onChange={(event) =>
+                                          updateOrderItem(
+                                            item.key,
+                                            "quantity",
+                                            event.target.value
+                                          )
+                                        }
+                                      />
+                                    </label>
+
+
+                                    <label>
+                                      Valor hora
+
+                                      <input
+                                        inputMode="decimal"
+                                        value={item.unitPrice}
+                                        placeholder="25000"
+                                        onChange={(event) =>
+                                          updateOrderItem(
+                                            item.key,
+                                            "unitPrice",
+                                            event.target.value
+                                          )
+                                        }
+                                      />
+                                    </label>
+                                  </>
+                                ) : (
+                                  <label className="panel-wide-field">
+                                    Valor del servicio
+
                                     <input
                                       inputMode="decimal"
                                       value={item.unitPrice}
-                                      placeholder="21000"
+                                      placeholder="180000"
                                       onChange={(event) =>
-                                        updateAdditionalItem(
+                                        updateOrderItem(
                                           item.key,
                                           "unitPrice",
                                           event.target.value
@@ -2733,65 +2993,111 @@ export function PanelPage() {
                                       }
                                     />
                                   </label>
+                                )}
 
-                                  <div className="panel-additional-total">
-                                    <span>Total</span>
+
+                                <div className="panel-service-discount-fields">
+
+                                  <label>
+                                    Tipo de descuento
+
+                                    <select
+                                      value={item.discountType}
+                                      onChange={(event) =>
+                                        updateOrderItem(
+                                          item.key,
+                                          "discountType",
+                                          event.target.value
+                                        )
+                                      }
+                                    >
+                                      <option value="FIXED">
+                                        $ Monto fijo
+                                      </option>
+
+                                      <option value="PERCENT">
+                                        % Porcentaje
+                                      </option>
+                                    </select>
+                                  </label>
+
+
+                                  <label>
+                                    {item.discountType === "PERCENT"
+                                      ? "Porcentaje"
+                                      : "Monto del descuento"}
+
+                                    <input
+                                      inputMode="decimal"
+                                      value={item.discountValue}
+                                      placeholder={
+                                        item.discountType === "PERCENT"
+                                          ? "10"
+                                          : "20000"
+                                      }
+                                      onChange={(event) =>
+                                        updateOrderItem(
+                                          item.key,
+                                          "discountValue",
+                                          event.target.value
+                                        )
+                                      }
+                                    />
+                                  </label>
+
+                                </div>
+
+
+                                <div className="panel-service-calculation">
+
+                                  <div>
+                                    <span>
+                                      Importe
+                                    </span>
+
                                     <strong>
-                                      {formatMoney(itemTotal)}
+                                      {formatMoney(
+                                        amounts.gross
+                                      )}
                                     </strong>
                                   </div>
+
+
+                                  <div className="panel-service-discount-total">
+                                    <span>
+                                      Descuento
+                                    </span>
+
+                                    <strong>
+                                      - {formatMoney(
+                                        amounts.discountAmount
+                                      )}
+                                    </strong>
+                                  </div>
+
+
+                                  <div className="panel-service-net-total">
+                                    <span>
+                                      Total servicio
+                                    </span>
+
+                                    <strong>
+                                      {formatMoney(
+                                        amounts.total
+                                      )}
+                                    </strong>
+                                  </div>
+
                                 </div>
-                              </div>
+
+                              </article>
                             );
-                          })}
-                        </div>
-                      )}
-                    </section>
-                    <div className="panel-discount-fields">
-                      <label>
-                        Tipo de descuento
-                        <select
-                          value={orderForm.discountType}
-                          onChange={(event) =>
-                            setOrderForm((current) => ({
-                              ...current,
-                              discountType: event.target.value as DiscountType,
-                            }))
                           }
-                        >
-                          <option value="FIXED">$ Monto fijo</option>
-                          <option value="PERCENT">% Porcentaje</option>
-                        </select>
-                      </label>
+                        )}
 
-                      <label>
-                        {orderForm.discountType === "PERCENT"
-                          ? "Porcentaje"
-                          : "Monto del descuento"}
-
-                        <input
-                          inputMode="decimal"
-                          value={orderForm.discount}
-                          placeholder={
-                            orderForm.discountType === "PERCENT"
-                              ? "10"
-                              : "42740"
-                          }
-                          onChange={(event) =>
-                            setOrderForm((current) => ({
-                              ...current,
-                              discount: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-
-                      <div className="panel-discount-preview">
-                        <span>Descuento aplicado</span>
-                        <strong>- {formatMoney(estimatedDiscount)}</strong>
                       </div>
-                    </div>
 
+                    </section>
                     <label className="panel-wide-field">
                       Observaciones para el cliente
                       <textarea

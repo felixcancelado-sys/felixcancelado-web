@@ -3024,3 +3024,151 @@
     grid-template-columns: 1fr;
   }
 }
+/* ==========================================================
+   SERVICIOS UNIFICADOS FINAL
+   ========================================================== */
+
+.panel-items-editor {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 16px;
+}
+
+.panel-items-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.panel-items-editor-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.panel-items-editor-heading span {
+  font-size: .78rem;
+  opacity: .65;
+}
+
+.panel-items-list {
+  display: grid;
+  gap: 16px;
+}
+
+.panel-service-card {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
+  padding: 18px;
+
+  border:
+    1px solid rgba(255,255,255,.11);
+
+  border-radius: 16px;
+
+  background:
+    rgba(255,255,255,.035);
+}
+
+.panel-service-card-header {
+  grid-column: 1 / -1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-service-card-header strong {
+  font-size: 1rem;
+}
+
+.panel-service-card-header button {
+  border: 0;
+  background: transparent;
+  color: #fb7185;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.panel-service-discount-fields {
+  grid-column: 1 / -1;
+
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
+}
+
+.panel-service-calculation {
+  grid-column: 1 / -1;
+
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.panel-service-calculation > div {
+  min-height: 58px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  padding: 10px 13px;
+
+  border-radius: 11px;
+
+  background:
+    rgba(255,255,255,.045);
+}
+
+.panel-service-calculation span {
+  font-size: .72rem;
+  opacity: .62;
+}
+
+.panel-service-calculation strong {
+  margin-top: 3px;
+  font-size: 1rem;
+}
+
+.panel-service-discount-total strong {
+  color: #fda4af;
+}
+
+.panel-service-net-total {
+  background:
+    rgba(99,240,184,.10) !important;
+}
+
+.panel-service-net-total strong {
+  color: #63f0b8;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 700px) {
+
+  .panel-items-editor-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .panel-add-service-button {
+    align-self: flex-start;
+  }
+
+  .panel-service-card {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-service-discount-fields,
+  .panel-service-calculation {
+    grid-template-columns: 1fr;
+  }
+}
